@@ -19,7 +19,13 @@ from continual_learner import ContinualLearner
 from exemplars import ExemplarHandler
 from replayer import Replayer
 from param_values import set_default_values
-
+# New imports 
+from train import pretrain_root
+from autoencoder_latent import AutoEncoderLatent
+from train_latent import train_cl_latent
+import evaluate_latent
+from root_classifier import RootClassifier
+from top_classifier import TopClassifier
 
 parser = argparse.ArgumentParser('./main.py', description='Run individual continual learning experiment.')
 parser.add_argument('--get-stamp', action='store_true', help='print param-stamp & exit')
@@ -113,9 +119,14 @@ eval_params.add_argument('--prec-n', type=int, default=1024, help="# samples for
 eval_params.add_argument('--sample-log', type=int, default=500, metavar="N", help="# iters after which to plot samples")
 eval_params.add_argument('--sample-n', type=int, default=64, help="# images to show")
 
-
+# latent replay 
+latent_params = parser.add_argument_group('Latent Replay')
+latent_params.add_argument('--latent-replay', type=str, default='off', choices=['on', 'off'])
+latent_params.add_argument('--network', type=str, default="mlp", choices=['mlp', 'cnn'])
 
 def run(args, verbose=False):
+
+    print("Latent replay turned", args.latent_replay)
 
     # Set default arguments & check for incompatible options
     args.lr_gen = args.lr if args.lr_gen is None else args.lr_gen
@@ -196,11 +207,47 @@ def run(args, verbose=False):
     # Prepare data for chosen experiment
     if verbose:
         print("\nPreparing the data...")
-    (train_datasets, test_datasets), config, classes_per_task = get_multitask_experiment(
-        name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
-        verbose=verbose, exception=True if args.seed==0 else False,
-    )
+    if args.latent_replay == "on": 
+        (train_datasets, test_datasets), config, classes_per_task, mnist_pretrain = get_multitask_experiment(
+            name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
+            verbose=verbose, exception=True if args.seed==0 else False, split_ratio=[50000, 10000]
+        )
+    else: 
+        (train_datasets, test_datasets), config, classes_per_task = get_multitask_experiment(
+            name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
+            verbose=verbose, exception=True if args.seed==0 else False,
+        )
 
+    #----------------------------------------------------------#
+    #-----DEFINING THE ROOT AND TOP (FOR LATENT REPLAY) -------#
+    #----------------------------------------------------------#
+
+    if args.latent_replay == "on": 
+
+        root_model = RootClassifier(
+            image_size=config['size'], image_channels=config['channels'], classes=config['classes'], 
+            fc_layers=args.fc_lay, fc_units=args.fc_units,
+            fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
+        ).to(device)
+
+        root_model.optim_list = [{'params': filter(lambda p: p.requires_grad, root_model.parameters()), 'lr': args.lr}]
+        root_model.optim_type = args.optimizer
+        if root_model.optim_type in ("afdam", "adam_reset"):
+            root_model.optimizer = optim.Adam(root_model.optim_list, betas=(0.9, 0.999))
+        elif root_model.optim_type=="sgd":
+            root_model.optimizer = optim.SGD(root_model.optim_list)
+
+        top_model = TopClassifier(classes=config['classes'], 
+            fc_layers=args.fc_lay, fc_units=args.fc_units, 
+            fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
+        ).to(device)
+
+        top_model.optim_list = [{'params': filter(lambda p: p.requires_grad, top_model.parameters()), 'lr': args.lr}]
+        top_model.optim_type = args.optimizer
+        if top_model.optim_type in ("adam", "adam_reset"):
+            top_model.optimizer = optim.Adam(top_model.optim_list, betas=(0.9, 0.999))
+        elif top_model.optim_type=="sgd":
+            top_model.optimizer = optim.SGD(top_model.optim_list)
 
     #-------------------------------------------------------------------------------------------------#
 
@@ -234,6 +281,15 @@ def run(args, verbose=False):
     else:
         raise ValueError("Unrecognized optimizer, '{}' is not currently a valid option".format(args.optimizer))
 
+    #-------------------------------------------------------------------------------------------------#
+
+    #------------------------------#
+    #----- ROOT PRETRAINING -------#
+    #------------------------------#
+
+    if args.latent_replay == "on": 
+        print("Pretraining the root...")
+        pretrain_root(root_model, model, mnist_pretrain)
 
     #-------------------------------------------------------------------------------------------------#
 
@@ -301,11 +357,18 @@ def run(args, verbose=False):
     train_gen = True if (args.replay=="generative" and not args.feedback) else False
     if train_gen:
         # -specify architecture
-        generator = AutoEncoder(
-            image_size=config['size'], image_channels=config['channels'],
-            fc_layers=args.g_fc_lay, fc_units=args.g_fc_uni, z_dim=args.g_z_dim, classes=config['classes'],
-            fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
-        ).to(device)
+        if args.latent_replay == "on": 
+            generator = AutoEncoderLatent(
+                latent_size=args.fc_units,
+                fc_layers=args.g_fc_lay, fc_units=args.g_fc_uni, z_dim=args.g_z_dim, classes=config['classes'],
+                fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
+            ).to(device)
+        else: 
+            generator = AutoEncoder(
+                image_size=config['size'], image_channels=config['channels'],
+                fc_layers=args.g_fc_lay, fc_units=args.g_fc_uni, z_dim=args.g_z_dim, classes=config['classes'],
+                fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
+            ).to(device)
         # -set optimizer(s)
         generator.optim_list = [{'params': filter(lambda p: p.requires_grad, generator.parameters()), 'lr': args.lr_gen}]
         generator.optim_type = args.optimizer
@@ -427,13 +490,22 @@ def run(args, verbose=False):
     # Keep track of training-time
     start = time.time()
     # Train model
-    train_cl(
-        model, train_datasets, replay_mode=args.replay, scenario=scenario, classes_per_task=classes_per_task,
-        iters=args.iters, batch_size=args.batch,
-        generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
-        sample_cbs=sample_cbs, eval_cbs=eval_cbs, loss_cbs=generator_loss_cbs if args.feedback else solver_loss_cbs,
-        metric_cbs=metric_cbs, use_exemplars=args.use_exemplars, add_exemplars=args.add_exemplars,
-    )
+    if args.latent_replay == "on": 
+        train_cl_latent(
+            top_model, train_datasets, root=root_model, replay_mode=args.replay, scenario=scenario, classes_per_task=classes_per_task,
+            iters=args.iters, batch_size=args.batch,
+            generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
+            sample_cbs=sample_cbs, eval_cbs=eval_cbs, loss_cbs=generator_loss_cbs if args.feedback else solver_loss_cbs,
+            metric_cbs=metric_cbs, use_exemplars=args.use_exemplars, add_exemplars=args.add_exemplars,
+        )
+    else: 
+        train_cl(
+            model, train_datasets, replay_mode=args.replay, scenario=scenario, classes_per_task=classes_per_task,
+            iters=args.iters, batch_size=args.batch,
+            generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
+            sample_cbs=sample_cbs, eval_cbs=eval_cbs, loss_cbs=generator_loss_cbs if args.feedback else solver_loss_cbs,
+            metric_cbs=metric_cbs, use_exemplars=args.use_exemplars, add_exemplars=args.add_exemplars,
+        )
     # Get total training-time in seconds, and write to file
     if args.time:
         training_time = time.time() - start
@@ -452,11 +524,18 @@ def run(args, verbose=False):
         print("\n\nEVALUATION RESULTS:")
 
     # Evaluate precision of final model on full test-set
-    precs = [evaluate.validate(
-        model, test_datasets[i], verbose=False, test_size=None, task=i+1, with_exemplars=False,
-        allowed_classes=list(range(classes_per_task*i, classes_per_task*(i+1))) if scenario=="task" else None
-    ) for i in range(args.tasks)]
+    if args.latent_replay == "on": 
+        precs = [evaluate_latent.validate(
+            top_model, test_datasets[i], root=root_model, verbose=False, test_size=None, task=i+1, with_exemplars=False,
+            allowed_classes=list(range(classes_per_task*i, classes_per_task*(i+1))) if scenario=="task" else None
+        ) for i in range(args.tasks)]
+    else:
+        precs = [evaluate.validate(
+            model, test_datasets[i], verbose=False, test_size=None, task=i+1, with_exemplars=False,
+            allowed_classes=list(range(classes_per_task*i, classes_per_task*(i+1))) if scenario=="task" else None
+        ) for i in range(args.tasks)]
     average_precs = sum(precs) / args.tasks
+
     # -print on screen
     if verbose:
         print("\n Precision on test-set{}:".format(" (softmax classification)" if args.use_exemplars else ""))
