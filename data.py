@@ -167,7 +167,7 @@ DATASET_CONFIGS = {
 
 
 def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_config=False, verbose=False,
-                             exception=False):
+                             exception=False, split_ratio=None):
     '''Load, organize and return train- and test-dataset for requested experiment.
 
     [exception]:    <bool>; if True, for visualization no permutation is applied to first task (permMNIST) or digits
@@ -218,6 +218,11 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
             # prepare train and test datasets with all classes
             mnist_train = get_dataset('mnist28', type="train", dir=data_dir, target_transform=target_transform,
                                       verbose=verbose)
+            
+            # NOTE: If required, take a slice from mnist_train and leave it for root pre-training. 
+            if split_ratio is not None: 
+                mnist_train, mnist_pretrain = torch.utils.data.random_split(mnist_train, split_ratio)
+
             mnist_test = get_dataset('mnist28', type="test", dir=data_dir, target_transform=target_transform,
                                      verbose=verbose)
             # generate labels-per-task
@@ -240,4 +245,6 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
     config['classes'] = classes_per_task if scenario=='domain' else classes_per_task*tasks
 
     # Return tuple of train-, validation- and test-dataset, config-dictionary and number of classes per task
+    if split_ratio is not None: 
+        return config if only_config else ((train_datasets, test_datasets), config, classes_per_task, mnist_pretrain)
     return config if only_config else ((train_datasets, test_datasets), config, classes_per_task)
