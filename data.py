@@ -209,21 +209,21 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
         if tasks>10:
             raise ValueError("Experiment 'splitMNIST' cannot have more than 10 tasks!")
         # configurations
-        config = DATASET_CONFIGS['mnist28']
+        config = DATASET_CONFIGS['mnist']
         classes_per_task = int(np.floor(10 / tasks))
         if not only_config:
             # prepare permutation to shuffle label-ids (to create different class batches for each random seed)
             permutation = np.array(list(range(10))) if exception else np.random.permutation(list(range(10)))
             target_transform = transforms.Lambda(lambda y, p=permutation: int(p[y]))
             # prepare train and test datasets with all classes
-            mnist_train = get_dataset('mnist28', type="train", dir=data_dir, target_transform=target_transform,
+            mnist_train = get_dataset('mnist', type="train", dir=data_dir, target_transform=target_transform,
                                       verbose=verbose)
             
             # NOTE: If required, take a slice from mnist_train and leave it for root pre-training. 
             if split_ratio is not None: 
                 mnist_train, mnist_pretrain = torch.utils.data.random_split(mnist_train, split_ratio)
 
-            mnist_test = get_dataset('mnist28', type="test", dir=data_dir, target_transform=target_transform,
+            mnist_test = get_dataset('mnist', type="test", dir=data_dir, target_transform=target_transform,
                                      verbose=verbose)
             # generate labels-per-task
             labels_per_task = [
