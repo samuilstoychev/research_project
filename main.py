@@ -216,16 +216,11 @@ def run(args, verbose=False):
     # Prepare data for chosen experiment
     if verbose:
         print("\nPreparing the data...")
-    if args.latent_replay == "on": 
-        (train_datasets, test_datasets), config, classes_per_task, mnist_pretrain = get_multitask_experiment(
-            name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
-            verbose=verbose, exception=True if args.seed==0 else False, split_ratio=[50000, 10000]
-        )
-    else: 
-        (train_datasets, test_datasets), config, classes_per_task = get_multitask_experiment(
-            name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
-            verbose=verbose, exception=True if args.seed==0 else False,
-        )
+
+    (train_datasets, test_datasets), config, classes_per_task, mnist_pretrain = get_multitask_experiment(
+        name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
+        verbose=verbose, exception=True if args.seed==0 else False, split_ratio=[50000, 10000]
+    )
     
     if args.network == "cnn": 
         if config['size'] == 28: 
