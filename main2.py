@@ -30,9 +30,6 @@ from cnn_classifier import CNNClassifier
 from cnn_root_classifier import CNNRootClassifier
 from cnn_top_classifier import CNNTopClassifier
 from CL_metrics_CLAIR import RAMU
-from CL_metrics_CLAIR import CPUUsage
-from CL_metrics_CLAIR import MAC
-import gc
 
 parser = argparse.ArgumentParser('./main.py', description='Run individual continual learning experiment.')
 parser.add_argument('--get-stamp', action='store_true', help='print param-stamp & exit')
@@ -132,12 +129,13 @@ latent_params.add_argument('--latent-replay', type=str, default='off', choices=[
 latent_params.add_argument('--network', type=str, default="mlp", choices=['mlp', 'cnn'])
 
 ramu = RAMU()
-cpuu = CPUUsage()
 
 def run(args, verbose=False):
 
     print("RAM AT BEGINNING:", ramu.compute("BEGINNING"))
+
     print("Latent replay turned", args.latent_replay)
+
     # Set default arguments & check for incompatible options
     args.lr_gen = args.lr if args.lr_gen is None else args.lr_gen
     args.g_iters = args.iters if args.g_iters is None else args.g_iters
@@ -200,6 +198,7 @@ def run(args, verbose=False):
     device = torch.device("cuda" if cuda else "cpu")
     if verbose:
         print("CUDA is {}used".format("" if cuda else "NOT(!!) "))
+
     # Set random seeds
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -212,7 +211,7 @@ def run(args, verbose=False):
     #----------------#
     #----- DATA -----#
     #----------------#
-    print("RAM BEFORE LOADING DATA:", ramu.compute("BEFORE LOADING"))
+
     # Prepare data for chosen experiment
     if verbose:
         print("\nPreparing the data...")
@@ -237,13 +236,13 @@ def run(args, verbose=False):
         # NOTE: This part is new. Trying to reduce the size of the generator as well. See if it works better with it. 
         if args.latent_replay == 'on': 
             args.g_fc_uni = min(args.g_fc_uni, LATENT_SPACE)
-    print("RAM AFTER LOADING DATA:", ramu.compute("RAM AFTER LOADING DATA"))
 
     #----------------------------------------------------------#
     #-----DEFINING THE ROOT AND TOP (FOR LATENT REPLAY) -------#
     #----------------------------------------------------------#
 
     if args.latent_replay == "on": 
+
         if args.network == "mlp": 
             root_model = RootClassifier(
                 image_size=config['size'], image_channels=config['channels'], classes=config['classes'], 
@@ -259,6 +258,7 @@ def run(args, verbose=False):
             root_model.optimizer = optim.Adam(root_model.optim_list, betas=(0.9, 0.999))
         elif root_model.optim_type=="sgd":
             root_model.optimizer = optim.SGD(root_model.optim_list)
+
         if args.network == "mlp": 
             top_model = TopClassifier(classes=config['classes'], 
                 fc_layers=args.fc_lay, fc_units=args.fc_units, 
@@ -266,6 +266,7 @@ def run(args, verbose=False):
             ).to(device)
         elif args.network == "cnn": 
             top_model = CNNTopClassifier(classes=config['classes'], latent_space=LATENT_SPACE).to(device)
+
         top_model.optim_list = [{'params': filter(lambda p: p.requires_grad, top_model.parameters()), 'lr': args.lr}]
         top_model.optim_type = args.optimizer
         if top_model.optim_type in ("adam", "adam_reset"):
@@ -278,6 +279,7 @@ def run(args, verbose=False):
     #------------------------------#
     #----- MODEL (CLASSIFIER) -----#
     #------------------------------#
+
     # Define main model (i.e., classifier, if requested with feedback connections)
     if args.feedback:
         model = AutoEncoder(
@@ -287,6 +289,7 @@ def run(args, verbose=False):
         ).to(device)
         model.lamda_pl = 1. #--> to make that this VAE is also trained to classify
     elif args.network == "cnn": 
+        print("Constructing a CNN classifier...")
         model = CNNClassifier(
             classes=config['classes'],latent_space=LATENT_SPACE, 
             binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
@@ -314,12 +317,10 @@ def run(args, verbose=False):
     #------------------------------#
     #----- ROOT PRETRAINING -------#
     #------------------------------#
-    print("RAM BEFORE PRE-TRAINING", ramu.compute("BEFORE PRETRAINING"))
+
     if args.latent_replay == "on": 
+        print("Pretraining the root...")
         pretrain_root(root_model, model, mnist_pretrain)
-        del mnist_pretrain
-        gc.collect()
-    print("RAM AFTER PRE-TRAINING", ramu.compute("AFTER PRETRAINING"))
 
     #-------------------------------------------------------------------------------------------------#
 
@@ -409,15 +410,6 @@ def run(args, verbose=False):
             generator.optimizer = optim.SGD(generator.optim_list)
     else:
         generator = None
-    
-    print("RAM AFTER DECLARING GENERATOR:", ramu.compute("AFTER GENERATOR"))
-
-    mac = MAC()
-    if args.latent_replay == "on": 
-        print("MACs of root classifier", mac.compute(root_model, torch.rand(32, 1, 32, 32)))
-        print("MACs of top classifier:", mac.compute(top_model, root_model(torch.rand(32, 1, 32, 32))))
-    else: 
-        print("MACs of model:", mac.compute(model, torch.rand(32, 1, 32, 32)))
 
     print("RAM BEFORE REPORTING:", ramu.compute("BEFORE REPORTING"))
 
@@ -438,11 +430,7 @@ def run(args, verbose=False):
     # Print some model-characteristics on the screen
     if verbose:
         # -main model
-        if args.latent_replay == "on": 
-            utils.print_model_info(top_model, title="TOP")
-            utils.print_model_info(root_model, title="ROOT")
-        else: 
-            utils.print_model_info(model, title="MAIN MODEL")
+        utils.print_model_info(model, title="MAIN MODEL")
         # -generator
         if generator is not None:
             utils.print_model_info(generator, title="GENERATOR")
@@ -701,7 +689,6 @@ def run(args, verbose=False):
     if verbose and args.time:
         print("=> Total training time = {:.1f} seconds\n".format(training_time))
     print("RAM AT THE END:", ramu.compute("AT THE END"))
-    print("CPU AT THE END:", cpuu.compute("AT THE END"))
 
 
     #-------------------------------------------------------------------------------------------------#

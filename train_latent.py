@@ -7,13 +7,16 @@ import copy
 import utils
 from data import SubDataset, ExemplarDataset
 from continual_learner import ContinualLearner
+# Benchmarking 
+from CL_metrics_CLAIR import RAMU
 
-
+ramu = RAMU()
 
 def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenario="class",classes_per_task=None,iters=2000,batch_size=32,
              generator=None, gen_iters=0, gen_loss_cbs=list(), loss_cbs=list(), eval_cbs=list(), sample_cbs=list(),
              use_exemplars=True, add_exemplars=False, metric_cbs=list()):
-
+    
+    peak_ramu = ramu.compute("TRAINING")
     # Set model in training-mode
     model.train()
 
@@ -31,6 +34,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
     # NOTE: 1 means 'start indexing from 1'. So task goes from 1 to N. 
     # NOTE: This is TASK_LOOP - iterating over the different TASKS
     for task, train_dataset in enumerate(train_datasets, 1):
+        peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
         
         # Find [active_classes]
         active_classes = None  # -> for Domain-IL scenario, always all classes are active
@@ -58,6 +62,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
         # Loop over all iterations
         # NOTE: Number of iterations specified in the function arguments. 
         batch_iterations = max(iters, gen_iters)
+        peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
         # NOTE: This is the second loop (BATCH_LOOP) - here we iterate over BATCHES. 
         for batch_index in range(1, batch_iterations+1):
@@ -70,7 +75,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
 
             # -----------------Collect data------------------#
 
-        
+            peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
             # NOTE: x and y are the training data from the CURRENT task
             x, y = next(data_loader)                                    #--> sample training data of current task
             Rx = root(x)
@@ -78,6 +83,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
             y = y-classes_per_task*(task-1) if scenario=="task" else y  #--> ITL: adjust y-targets to 'active range'
             x, y = x.to(device), y.to(device)                           #--> transfer them to correct device
             Rx = Rx.to(device)
+            peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
             
             scores = None
 
@@ -87,7 +93,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
             if Generative: 
                 # Get replayed data (i.e., [x_]) -- either current data or use previous generator
                 Rx_ = previous_generator.sample(batch_size)
-
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
                 # Get target scores and labels (i.e., [scores_] / [y_]) -- using previous model, with no_grad()
                 # -if there are no task-specific mask, obtain all predicted scores at once
                 if (not hasattr(previous_model, "mask_dict")) or (previous_model.mask_dict is None):
@@ -126,6 +132,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
                 # Only keep predicted y/scores if required (as otherwise unnecessary computations will be done)
                 y_ = y_ if (model.replay_targets == "hard") else None
                 scores_ = scores_ if (model.replay_targets == "soft") else None
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
 
             #---> Train MAIN MODEL
@@ -134,8 +141,10 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
             # if it has already been trained the required `iters` times. 
             if batch_index <= iters:
                 # Train the main model with this batch
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
                 loss_dict = model.train_a_batch(Rx, y, x_=Rx_, y_=y_, scores=scores, scores_=scores_,
                                                 active_classes=active_classes, task=task, rnt = 1./task)
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
                 # Fire callbacks (for visualization of training-progress / evaluating performance after each task)
                 # NOTE: `_cb` stands for "callback". 
@@ -159,8 +168,10 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
                 # Train the generator with this batch
                 # NOTE: I think (and I hope) that the generator does not actually need `y` to be passed. 
                 # It seems like it's only there for precision? 
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
                 loss_dict = generator.train_a_batch(Rx, y, x_=Rx_, y_=y_, scores_=scores_, active_classes=active_classes,
                                                     task=task, rnt=1./task)
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
                 # Fire callbacks on each iteration
                 for loss_cb in gen_loss_cbs:
@@ -190,3 +201,5 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
         # That is because the first iteration is 'special' - there is no 'previous' model to remember. 
         Generative = True
         previous_generator = copy.deepcopy(generator).eval() 
+        peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
+    print("PEAK TRAINING RAM:", peak_ramu)

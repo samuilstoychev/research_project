@@ -7,8 +7,10 @@ import copy
 import utils
 from data import SubDataset, ExemplarDataset
 from continual_learner import ContinualLearner
+# Benchmarking 
+from CL_metrics_CLAIR import RAMU
 
-
+ramu = RAMU()
 
 def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes_per_task=None,iters=2000,batch_size=32,
              generator=None, gen_iters=0, gen_loss_cbs=list(), loss_cbs=list(), eval_cbs=list(), sample_cbs=list(),
@@ -24,7 +26,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
     [generator]         None or <nn.Module>, if a seperate generative model should be trained (for [gen_iters] per task)
     [*_cbs]             <list> of call-back functions to evaluate training-progress'''
 
-
+    peak_ramu = ramu.compute("TRAINING")
     # Set model in training-mode
     model.train()
 
@@ -45,7 +47,8 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
 
     # Loop over all tasks.
     for task, train_dataset in enumerate(train_datasets, 1):
-
+        peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
+        
         # If offline replay-setting, create large database of all tasks so far
         if replay_mode=="offline" and (not scenario=="task"):
             train_dataset = ConcatDataset(train_datasets[:task])
@@ -101,6 +104,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
 
         # Loop over all iterations
         iters_to_use = iters if (generator is None) else max(iters, gen_iters)
+        peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
         for batch_index in range(1, iters_to_use+1):
 
             # Update # iters left on current data-loader(s) and, if needed, create new one(s)
@@ -134,6 +138,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
 
             # -----------------Collect data------------------#
 
+            peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
             #####-----CURRENT BATCH-----#####
             if replay_mode=="offline" and scenario=="task":
                 x = y = scores = None
@@ -148,7 +153,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                         scores = previous_model(x)[:, :(classes_per_task * (task - 1))]
                 else:
                     scores = None
-
+            peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
             #####-----REPLAYED BATCH-----#####
             if not Exact and not Generative and not Current:
@@ -195,7 +200,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
             if Generative or Current:
                 # Get replayed data (i.e., [x_]) -- either current data or use previous generator
                 x_ = x if Current else previous_generator.sample(batch_size)
-
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
                 # Get target scores and labels (i.e., [scores_] / [y_]) -- using previous model, with no_grad()
                 # -if there are no task-specific mask, obtain all predicted scores at once
                 if (not hasattr(previous_model, "mask_dict")) or (previous_model.mask_dict is None):
@@ -230,14 +235,16 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                 # Only keep predicted y/scores if required (as otherwise unnecessary computations will be done)
                 y_ = y_ if (model.replay_targets == "hard") else None
                 scores_ = scores_ if (model.replay_targets == "soft") else None
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
 
             #---> Train MAIN MODEL
             if batch_index <= iters:
-
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
                 # Train the main model with this batch
                 loss_dict = model.train_a_batch(x, y, x_=x_, y_=y_, scores=scores, scores_=scores_,
                                                 active_classes=active_classes, task=task, rnt = 1./task)
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
                 # Update running parameter importance estimates in W
                 if isinstance(model, ContinualLearner) and (model.si_c>0):
@@ -265,8 +272,10 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
             if generator is not None and batch_index <= gen_iters:
 
                 # Train the generator with this batch
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
                 loss_dict = generator.train_a_batch(x, y, x_=x_, y_=y_, scores_=scores_, active_classes=active_classes,
                                                     task=task, rnt=1./task)
+                peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
                 # Fire callbacks on each iteration
                 for loss_cb in gen_loss_cbs:
@@ -345,6 +354,9 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                     target_transform = (lambda y, x=classes_per_task: y % x) if scenario == "domain" else None
                     previous_datasets = [
                         ExemplarDataset(model.exemplar_sets, target_transform=target_transform)]
+        peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
+    peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
+    print("PEAK TRAINING RAM:", peak_ramu)
 
 def pretrain_root(root_model, model, pretrain_dataset, batch_iterations=1000, batch_size=32): 
 

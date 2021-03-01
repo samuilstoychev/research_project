@@ -8,10 +8,11 @@ from replayer import Replayer
 import utils
 
 
-class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
+class CNNRootClassifier(ContinualLearner, Replayer, ExemplarHandler):
     '''Model for classifying images, "enriched" as "ContinualLearner"-, Replayer- and ExemplarHandler-object.'''
 
-    def __init__(self, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False):
+    # TODO: Do I need the `classes` argument? 
+    def __init__(self, classes, binaryCE=False, binaryCE_distill=False, AGEM=False):
 
         # configurations
         super().__init__()
@@ -26,20 +27,9 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
                           #   the gradient of the current data (as in A-GEM, see Chaudry et al., 2019; ICLR)
 
         ######------SPECIFY MODEL------######
-        # From https://github.com/pytorch/examples/blob/master/mnist/main.py
         self.conv1 = nn.Conv2d(1, 3, 5)
         self.conv2 = nn.Conv2d(3, 3, 5)
         self.dropout1 = nn.Dropout(0.25)
-        self.dropout2 = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(latent_space, 128)
-        self.fc2 = nn.Linear(128, 10)
-
-        # From https://nextjournal.com/gkoehler/pytorch-mnist
-        # self.conv1 = nn.Conv2d(1, 32, kernel_size=3)
-        # self.conv2 = nn.Conv2d(32, 32, kernel_size=3)
-        # self.conv2_drop = nn.Dropout2d()
-        # self.fc1 = nn.Linear(320, 32)
-        # self.fc2 = nn.Linear(32, 10)
 
     def list_init_layers(self):
         '''Return list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''
@@ -47,15 +37,11 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
         list += self.conv1
         list += self.conv2
         list += self.dropout1
-        list += self.dropout2
-        # list += self.conv2_drop
-        list += self.fc1
-        list += self.fc2
         return list
 
     @property
     def name(self):
-        return "{}_c{}".format("CNN_CLASSIFIER", self.classes)
+        return "{}_c{}".format("CNN_ROOT_CLASSIFIER", self.classes)
 
 
     def forward(self, x):
@@ -66,32 +52,10 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
         x = F.max_pool2d(x, 2)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
-        return output
-        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        # x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        # x = x.view(-1, 320)
-        # x = F.relu(self.fc1(x))
-        # x = F.dropout(x, training=self.training)
-        # x = self.fc2(x)
-        # return F.log_softmax(x)
+        return x
 
     def feature_extractor(self, x):
-        x = self.conv1(x)
-        x = F.relu(x)
-        x = self.conv2(x)
-        x = F.relu(x)
-        x = F.max_pool2d(x, 2)
-        x = self.dropout1(x)
-        x = torch.flatten(x, 1)
-        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        # x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        # x = x.view(-1, 320)
-        return x
+        return self.forward(x)
 
 
     def train_a_batch(self, x, y, scores=None, x_=None, y_=None, scores_=None, rnt=0.5, active_classes=None, task=1):
