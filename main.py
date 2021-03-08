@@ -21,6 +21,7 @@ from replayer import Replayer
 from param_values import set_default_values
 # New imports 
 from train import pretrain_root
+from train import pretrain_baseline
 from autoencoder_latent import AutoEncoderLatent
 from train_latent import train_cl_latent
 import evaluate_latent
@@ -130,6 +131,10 @@ eval_params.add_argument('--sample-n', type=int, default=64, help="# images to s
 latent_params = parser.add_argument_group('Latent Replay')
 latent_params.add_argument('--latent-replay', type=str, default='off', choices=['on', 'off'])
 latent_params.add_argument('--network', type=str, default="mlp", choices=['mlp', 'cnn'])
+latent_params.add_argument('--latent-size', type=int, default=200)
+latent_params.add_argument('--pretrain-baseline', action='store_true')
+latent_params.add_argument('--out-channels', type=int, default=5)
+latent_params.add_argument('--kernel-size', type=int, default=5)
 
 ramu = RAMU()
 cpuu = CPUUsage()
@@ -222,16 +227,6 @@ def run(args, verbose=False):
         verbose=verbose, exception=True if args.seed==0 else False, split_ratio=[50000, 10000]
     )
     
-    if args.network == "cnn": 
-        if config['size'] == 28: 
-            LATENT_SPACE = 300 
-        elif config['size'] == 32: 
-            LATENT_SPACE = 432 
-        else: 
-            raise ValueError("Invalid MNIST image size " + str(config['size']))
-        # NOTE: This part is new. Trying to reduce the size of the generator as well. See if it works better with it. 
-        if args.latent_replay == 'on': 
-            args.g_fc_uni = min(args.g_fc_uni, LATENT_SPACE)
     print("RAM AFTER LOADING DATA:", ramu.compute("RAM AFTER LOADING DATA"))
 
     #----------------------------------------------------------#
@@ -246,7 +241,9 @@ def run(args, verbose=False):
                 fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
             ).to(device)
         elif args.network == "cnn": 
-            root_model = CNNRootClassifier(classes=config['classes']).to(device)
+            root_model = CNNRootClassifier(image_size=config['size'], classes=config['classes'], 
+                                           latent_space=args.latent_size, out_channels=args.out_channels, 
+                                           kernel_size=args.kernel_size).to(device)
 
         root_model.optim_list = [{'params': filter(lambda p: p.requires_grad, root_model.parameters()), 'lr': args.lr}]
         root_model.optim_type = args.optimizer
@@ -260,7 +257,7 @@ def run(args, verbose=False):
                 fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
             ).to(device)
         elif args.network == "cnn": 
-            top_model = CNNTopClassifier(classes=config['classes'], latent_space=LATENT_SPACE).to(device)
+            top_model = CNNTopClassifier(classes=config['classes'], latent_space=args.latent_size).to(device)
         top_model.optim_list = [{'params': filter(lambda p: p.requires_grad, top_model.parameters()), 'lr': args.lr}]
         top_model.optim_type = args.optimizer
         if top_model.optim_type in ("adam", "adam_reset"):
@@ -283,8 +280,9 @@ def run(args, verbose=False):
         model.lamda_pl = 1. #--> to make that this VAE is also trained to classify
     elif args.network == "cnn": 
         model = CNNClassifier(
-            classes=config['classes'],latent_space=LATENT_SPACE, 
+            image_size=config['size'], classes=config['classes'], latent_space=args.latent_size, 
             binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
+            out_channels=args.out_channels, kernel_size=args.kernel_size
         ).to(device)
     else:
         model = Classifier(
@@ -314,6 +312,11 @@ def run(args, verbose=False):
         pretrain_root(root_model, model, mnist_pretrain)
         del mnist_pretrain
         gc.collect()
+    elif args.pretrain_baseline:
+        pretrain_baseline(model, mnist_pretrain)
+        del mnist_pretrain
+        gc.collect()
+
     print("RAM AFTER PRE-TRAINING", ramu.compute("AFTER PRETRAINING"))
 
     #-------------------------------------------------------------------------------------------------#
@@ -383,9 +386,8 @@ def run(args, verbose=False):
     if train_gen:
         # -specify architecture
         if args.latent_replay == "on": 
-            latent_size = LATENT_SPACE if args.network == "cnn" else args.fc_units
             generator = AutoEncoderLatent(
-                latent_size=latent_size,
+                latent_size=args.latent_size,
                 fc_layers=args.g_fc_lay, fc_units=args.g_fc_uni, z_dim=args.g_z_dim, classes=config['classes'],
                 fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
             ).to(device)

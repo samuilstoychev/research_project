@@ -6,18 +6,24 @@ from exemplars import ExemplarHandler
 from continual_learner import ContinualLearner
 from replayer import Replayer
 import utils
-
+from cnn_root_classifier import CNNRootClassifier
+from cnn_top_classifier import CNNTopClassifier
 
 class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
     '''Model for classifying images, "enriched" as "ContinualLearner"-, Replayer- and ExemplarHandler-object.'''
 
-    def __init__(self, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False):
+    def __init__(self, image_size, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False, 
+                 out_channels=5, kernel_size=5):
 
         # configurations
         super().__init__()
         self.classes = classes
         self.label = "Classifier"
-
+        self.latent_space = latent_space
+        self.image_size = image_size
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.flattened_size = int(((image_size - 2*(kernel_size-1)) ** 2) * (0.25 * out_channels))
         # settings for training
         self.binaryCE = binaryCE                 #-> use binary (instead of multiclass) prediction error
         self.binaryCE_distill = binaryCE_distill #-> for classes from previous tasks, use the by the previous model
@@ -27,31 +33,34 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
 
         ######------SPECIFY MODEL------######
         # From https://github.com/pytorch/examples/blob/master/mnist/main.py
-        self.conv1 = nn.Conv2d(1, 3, 5)
-        self.conv2 = nn.Conv2d(3, 3, 5)
+        self.conv1 = nn.Conv2d(1, self.out_channels, self.kernel_size)
+        self.conv2 = nn.Conv2d(self.out_channels, self.out_channels, self.kernel_size)
         self.dropout1 = nn.Dropout(0.25)
         self.dropout2 = nn.Dropout(0.5)
-        self.fc1 = nn.Linear(latent_space, 128)
+        self.fc0 = nn.Linear(self.flattened_size, self.latent_space)
+        self.fc1 = nn.Linear(self.latent_space, 128)
         self.fc2 = nn.Linear(128, 10)
 
-        # From https://nextjournal.com/gkoehler/pytorch-mnist
-        # self.conv1 = nn.Conv2d(1, 32, kernel_size=3)
-        # self.conv2 = nn.Conv2d(32, 32, kernel_size=3)
-        # self.conv2_drop = nn.Dropout2d()
-        # self.fc1 = nn.Linear(320, 32)
-        # self.fc2 = nn.Linear(32, 10)
-
     def list_init_layers(self):
-        '''Return list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''
+        '''Return  list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''
         list = []
         list += self.conv1
         list += self.conv2
         list += self.dropout1
         list += self.dropout2
-        # list += self.conv2_drop
+        list += self.fc0
         list += self.fc1
         list += self.fc2
         return list
+
+    def get_sample_root(self): 
+        return CNNRootClassifier(self.image_size, self.classes, self.latent_space, 
+                                 self.binaryCE, self.binaryCE_distill, self.AGEM, 
+                                 out_channels=self.out_channels, kernel_size=self.kernel_size)
+    
+    def get_sample_top(self): 
+        return CNNTopClassifier(self.classes, self.latent_space, 
+                                self.binaryCE, self.binaryCE_distill, self.AGEM)
 
     @property
     def name(self):
@@ -66,19 +75,14 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
         x = F.max_pool2d(x, 2)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
+        x = self.fc0(x)
+        x = torch.sigmoid(x)
         x = self.fc1(x)
         x = F.relu(x)
         x = self.dropout2(x)
         x = self.fc2(x)
         output = F.log_softmax(x, dim=1)
         return output
-        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        # x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        # x = x.view(-1, 320)
-        # x = F.relu(self.fc1(x))
-        # x = F.dropout(x, training=self.training)
-        # x = self.fc2(x)
-        # return F.log_softmax(x)
 
     def feature_extractor(self, x):
         x = self.conv1(x)
@@ -88,9 +92,8 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
         x = F.max_pool2d(x, 2)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
-        # x = F.relu(F.max_pool2d(self.conv1(x), 2))
-        # x = F.relu(F.max_pool2d(self.conv2_drop(self.conv2(x)), 2))
-        # x = x.view(-1, 320)
+        x = self.fc0(x)
+        x = torch.sigmoid(x)
         return x
 
 

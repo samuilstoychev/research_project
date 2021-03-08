@@ -12,13 +12,18 @@ class CNNRootClassifier(ContinualLearner, Replayer, ExemplarHandler):
     '''Model for classifying images, "enriched" as "ContinualLearner"-, Replayer- and ExemplarHandler-object.'''
 
     # TODO: Do I need the `classes` argument? 
-    def __init__(self, classes, binaryCE=False, binaryCE_distill=False, AGEM=False):
+    def __init__(self, image_size, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False, 
+                 out_channels=5, kernel_size=5):
 
         # configurations
         super().__init__()
         self.classes = classes
         self.label = "Classifier"
-
+        self.latent_space = latent_space
+        self.image_size = image_size
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.flattened_size = int(((image_size - 2*(kernel_size-1)) ** 2) * (0.25 * out_channels))
         # settings for training
         self.binaryCE = binaryCE                 #-> use binary (instead of multiclass) prediction error
         self.binaryCE_distill = binaryCE_distill #-> for classes from previous tasks, use the by the previous model
@@ -27,9 +32,10 @@ class CNNRootClassifier(ContinualLearner, Replayer, ExemplarHandler):
                           #   the gradient of the current data (as in A-GEM, see Chaudry et al., 2019; ICLR)
 
         ######------SPECIFY MODEL------######
-        self.conv1 = nn.Conv2d(1, 3, 5)
-        self.conv2 = nn.Conv2d(3, 3, 5)
+        self.conv1 = nn.Conv2d(1, self.out_channels, self.kernel_size)
+        self.conv2 = nn.Conv2d(self.out_channels, self.out_channels, self.kernel_size)
         self.dropout1 = nn.Dropout(0.25)
+        self.fc0 = nn.Linear(self.flattened_size, latent_space)
 
     def list_init_layers(self):
         '''Return list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''
@@ -37,6 +43,7 @@ class CNNRootClassifier(ContinualLearner, Replayer, ExemplarHandler):
         list += self.conv1
         list += self.conv2
         list += self.dropout1
+        list += self.fc0
         return list
 
     @property
@@ -52,6 +59,8 @@ class CNNRootClassifier(ContinualLearner, Replayer, ExemplarHandler):
         x = F.max_pool2d(x, 2)
         x = self.dropout1(x)
         x = torch.flatten(x, 1)
+        x = self.fc0(x)
+        x = torch.sigmoid(x)
         return x
 
     def feature_extractor(self, x):

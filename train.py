@@ -389,3 +389,42 @@ def pretrain_root(root_model, model, pretrain_dataset, batch_iterations=1000, ba
     for name, param in model_params: 
         if name in root_params_dict: 
             root_params_dict[name].data.copy_(param.data)
+
+def pretrain_baseline(model, pretrain_dataset, batch_iterations=1000, batch_size=32): 
+    model.train()
+    # Use cuda?
+    cuda = model._is_on_cuda()
+    device = model._device()
+
+    # root_layers = model.get_root_layers()
+    # top_layers_init = model.get_top_layers_init()
+    root_model = model.get_sample_root()
+    top_model = model.get_sample_top()
+
+    root_params = root_model.named_parameters()
+    top_params = top_model.named_parameters()
+    model_params_dict = dict(model.named_parameters())
+
+    # Note that we pre-train the model here using the `mnist_pretrain` slice that we have defined earlier. 
+    data_loader = iter(utils.get_data_loader(pretrain_dataset, 32, cuda=cuda, drop_last=True))
+
+    active_classes = list(range(10))
+    n_loads = 0 
+
+    for batch_index in range(1, batch_iterations+1):
+        try:     
+            x, y = next(data_loader)                                #--> sample training data of current task
+            n_loads += 1
+        except: 
+            print("Finished pre-training after " + str(n_loads * batch_size) + " samples.")
+            break 
+        x, y = x.to(device), y.to(device)                           #--> transfer them to correct device
+        model.train_a_batch(x, y, active_classes=active_classes)
+
+    # Freeze root layers 
+    # https://discuss.pytorch.org/t/how-the-pytorch-freeze-network-in-some-layers-only-the-rest-of-the-training/7088/2
+    for name, param in root_params: 
+        model_params_dict[name].requires_grad = False
+
+    for name, param in top_params: 
+        model_params_dict[name].data.copy_(param.data)
