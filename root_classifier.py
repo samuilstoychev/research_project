@@ -41,12 +41,7 @@ class RootClassifier(ContinualLearner, Replayer, ExemplarHandler):
         # fully connected hidden layers
         self.fcE = MLP(input_size=image_channels*image_size**2, output_size=fc_units, layers=fc_layers-1,
                        hid_size=fc_units, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl, bias=bias,
-                       excitability=excitability, excit_buffer=excit_buffer, gated=gated)
-                       
-        mlp_output_size = fc_units if fc_layers>1 else image_channels*image_size**2
-
-        # classifier
-        # self.classifier = fc_layer(mlp_output_size, classes, excit_buffer=True, nl='none', drop=fc_drop)
+                       excitability=excitability, excit_buffer=excit_buffer, gated=gated, latent_space=200)
 
 
     def list_init_layers(self):

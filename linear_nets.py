@@ -76,7 +76,7 @@ class MLP(nn.Module):
 
     def __init__(self, input_size=1000, output_size=10, layers=2, hid_size=1000, hid_smooth=None, size_per_layer=None,
                  drop=0, batch_norm=True, nl="relu", bias=True, excitability=False, excit_buffer=False, gated=False,
-                 output='normal'):
+                 output='normal', latent_space=0):
         '''sizes: 0th=[input], 1st=[hid_size], ..., 1st-to-last=[hid_smooth], last=[output].
         [input_size]       # of inputs
         [output_size]      # of units in final layer
@@ -130,6 +130,13 @@ class MLP(nn.Module):
                     batch_norm=False, gated=gated,
                     nl_mean=nn.Sigmoid() if output=="logistic" else utils.Identity(),
                     nl_logvar=nn.Hardtanh(min_val=-4.5, max_val=0.) if output=="logistic" else utils.Identity(),
+                )
+            elif latent_space is not 0: 
+                layer = fc_layer(
+                    in_size, latent_space if lay_id==self.layers else out_size, 
+                    bias=bias, excitability=excitability, excit_buffer=excit_buffer, drop=drop,
+                    batch_norm=False if (lay_id==self.layers and not output=="normal") else batch_norm, gated=gated,
+                    nl=nn.Sigmoid() if lay_id==self.layers else nl,
                 )
             else:
                 layer = fc_layer(
