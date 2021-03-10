@@ -27,12 +27,8 @@ class TopClassifier(ContinualLearner, Replayer, ExemplarHandler):
         self.AGEM = AGEM  #-> use gradient of replayed data as inequality constraint for (instead of adding it to)
                           #   the gradient of the current data (as in A-GEM, see Chaudry et al., 2019; ICLR)
 
-
-        # The "input" size of the top classifier equals the latent space 
-        # (the size of the hidden layers), which is 1000 by default.    
-        mlp_output_size = fc_units
         # classifier
-        self.classifier = fc_layer(mlp_output_size, classes, excit_buffer=True, nl='none', drop=fc_drop)
+        self.classifier = fc_layer(200, classes, excit_buffer=True, nl='none', drop=fc_drop)
 
 
     def list_init_layers(self):

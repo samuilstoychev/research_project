@@ -5,20 +5,28 @@ from exemplars import ExemplarHandler
 from continual_learner import ContinualLearner
 from replayer import Replayer
 import utils
-
+from root_classifier import RootClassifier
+from top_classifier import TopClassifier
 
 class Classifier(ContinualLearner, Replayer, ExemplarHandler):
     '''Model for classifying images, "enriched" as "ContinualLearner"-, Replayer- and ExemplarHandler-object.'''
 
     def __init__(self, image_size, image_channels, classes,
                  fc_layers=3, fc_units=1000, fc_drop=0, fc_bn=False, fc_nl="relu", gated=False,
-                 bias=True, excitability=False, excit_buffer=False, binaryCE=False, binaryCE_distill=False, AGEM=False):
+                 bias=True, excitability=False, excit_buffer=False, binaryCE=False, binaryCE_distill=False, 
+                 AGEM=False):
 
         # configurations
         super().__init__()
+        self.image_size = image_size
+        self.image_channels = image_channels
         self.classes = classes
         self.label = "Classifier"
         self.fc_layers = fc_layers
+        self.fc_units = fc_units
+        self.fc_drop = fc_drop 
+        self.fc_bn = fc_bn 
+        self.fc_nl = fc_nl
 
         # settings for training
         self.binaryCE = binaryCE                 #-> use binary (instead of multiclass) prediction error
@@ -40,11 +48,9 @@ class Classifier(ContinualLearner, Replayer, ExemplarHandler):
         # fully connected hidden layers
         self.fcE = MLP(input_size=image_channels*image_size**2, output_size=fc_units, layers=fc_layers-1,
                        hid_size=fc_units, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl, bias=bias,
-                       excitability=excitability, excit_buffer=excit_buffer, gated=gated)
-        mlp_output_size = fc_units if fc_layers>1 else image_channels*image_size**2
-
-        # classifier
-        self.classifier = fc_layer(mlp_output_size, classes, excit_buffer=True, nl='none', drop=fc_drop)
+                       excitability=excitability, excit_buffer=excit_buffer, gated=gated, latent_space=200)
+        
+        self.classifier = fc_layer(200, classes, excit_buffer=True, nl='none', drop=fc_drop)
 
 
     def list_init_layers(self):
@@ -53,6 +59,17 @@ class Classifier(ContinualLearner, Replayer, ExemplarHandler):
         list += self.fcE.list_init_layers()
         list += self.classifier.list_init_layers()
         return list
+
+    def get_sample_root(self): 
+        return RootClassifier(
+                image_size=self.image_size, image_channels=self.image_channels, classes=self.classes, 
+                fc_layers=self.fc_layers, fc_units=self.fc_units,
+                fc_drop=self.fc_drop, fc_bn=self.fc_bn, fc_nl=self.fc_nl)
+    
+    def get_sample_top(self): 
+        return TopClassifier(classes=self.classes, 
+                fc_layers=self.fc_layers, fc_units=self.fc_units, 
+                fc_drop=self.fc_drop, fc_bn=self.fc_bn, fc_nl=self.fc_nl)
 
     @property
     def name(self):
