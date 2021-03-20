@@ -4,3 +4,4 @@ __pycache__/
 datasets/
 plots/
 results/
+.DS_Store

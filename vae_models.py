@@ -9,7 +9,8 @@ class AutoEncoder(Replayer):
     """Class for variational auto-encoder (VAE) models."""
 
     def __init__(self, image_size, image_channels, classes,
-                 fc_layers=3, fc_units=1000, fc_drop=0, fc_bn=True, fc_nl="relu", gated=False, z_dim=20):
+                 fc_layers=3, fc_units=1000, fc_drop=0, fc_bn=True, fc_nl="relu", gated=False, z_dim=20, 
+                 dataset="mnist"):
         '''Class for variational auto-encoder (VAE) models.'''
 
         # Set configurations
@@ -39,10 +40,16 @@ class AutoEncoder(Replayer):
         ##>----Encoder (= q[z|x])----<##
         # -flatten image to 2D-tensor
         self.flatten = utils.Flatten()
+
+        if dataset == "ckplus": 
+            self.input_size = image_size[0] * image_size[1] * image_channels
+        else: 
+            self.input_size = image_channels*image_size**2
+
         # -fully connected hidden layers
-        self.fcE = MLP(input_size=image_channels*image_size**2, output_size=fc_units, layers=fc_layers-1,
+        self.fcE = MLP(input_size=self.input_size, output_size=fc_units, layers=fc_layers-1,
                        hid_size=fc_units, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl, gated=gated)
-        mlp_output_size = fc_units if fc_layers > 1 else image_channels*image_size**2
+        mlp_output_size = fc_units if fc_layers > 1 else self.input_size
         # -to z
         self.toZ = fc_layer_split(mlp_output_size, z_dim, nl_mean='none', nl_logvar='none')
 
@@ -54,7 +61,7 @@ class AutoEncoder(Replayer):
         out_nl = True if fc_layers > 1 else False
         self.fromZ = fc_layer(z_dim, mlp_output_size, batch_norm=(out_nl and fc_bn), nl=fc_nl if out_nl else "none")
         # -fully connected hidden layers
-        self.fcD = MLP(input_size=fc_units, output_size=image_channels*image_size**2, layers=fc_layers-1,
+        self.fcD = MLP(input_size=fc_units, output_size=self.input_size, layers=fc_layers-1,
                        hid_size=fc_units, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl, gated=gated, output='BCE')
         # -to image-shape
         self.to_image = utils.Reshape(image_channels=image_channels)
@@ -63,7 +70,7 @@ class AutoEncoder(Replayer):
     @property
     def name(self):
         fc_label = "{}--".format(self.fcE.name) if self.fc_layers>1 else ""
-        hid_label = "{}{}-".format("i", self.image_channels*self.image_size**2) if self.fc_layers==1 else ""
+        hid_label = "{}{}-".format("i", self.input_size) if self.fc_layers==1 else ""
         z_label = "z{}".format(self.z_dim)
         return "{}({}{}{}-c{})".format(self.label, fc_label, hid_label, z_label, self.classes)
 
@@ -220,7 +227,7 @@ class AutoEncoder(Replayer):
             variatL = self.calculate_variat_loss(mu=mu, logvar=logvar)
             variatL = torch.mean(variatL)                             #-> average over batch
             if self.average:
-                variatL /= (self.image_channels * self.image_size**2) #-> divide by # of input-pixels, if [self.average]
+                variatL /= self.input_size #-> divide by # of input-pixels, if [self.average]
         else:
             variatL = torch.tensor(0., device=self._device())
 

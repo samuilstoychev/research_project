@@ -13,8 +13,7 @@ class CNNRootClassifier(ContinualLearner, Replayer, ExemplarHandler):
 
     # TODO: Do I need the `classes` argument? 
     def __init__(self, image_size, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False, 
-                 out_channels=5, kernel_size=5):
-
+                 out_channels=5, kernel_size=5, dataset="mnist"):
         # configurations
         super().__init__()
         self.classes = classes
@@ -23,7 +22,10 @@ class CNNRootClassifier(ContinualLearner, Replayer, ExemplarHandler):
         self.image_size = image_size
         self.out_channels = out_channels
         self.kernel_size = kernel_size
-        self.flattened_size = int(((image_size - 2*(kernel_size-1)) ** 2) * (0.25 * out_channels))
+        if dataset == "ckplus": 
+            self.flattened_size = int((image_size[0] - 2*(kernel_size-1)) * (image_size[1] - 2*(kernel_size-1)) * 0.25 * out_channels)
+        else: 
+            self.flattened_size = int(((image_size - 2*(kernel_size-1)) ** 2) * (0.25 * out_channels))
         # settings for training
         self.binaryCE = binaryCE                 #-> use binary (instead of multiclass) prediction error
         self.binaryCE_distill = binaryCE_distill #-> for classes from previous tasks, use the by the previous model

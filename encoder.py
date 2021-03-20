@@ -14,7 +14,7 @@ class Classifier(ContinualLearner, Replayer, ExemplarHandler):
     def __init__(self, image_size, image_channels, classes,
                  fc_layers=3, fc_units=1000, fc_drop=0, fc_bn=False, fc_nl="relu", gated=False,
                  bias=True, excitability=False, excit_buffer=False, binaryCE=False, binaryCE_distill=False, 
-                 AGEM=False):
+                 AGEM=False, dataset="mnist"):
 
         # configurations
         super().__init__()
@@ -27,6 +27,7 @@ class Classifier(ContinualLearner, Replayer, ExemplarHandler):
         self.fc_drop = fc_drop 
         self.fc_bn = fc_bn 
         self.fc_nl = fc_nl
+        self.dataset=dataset
 
         # settings for training
         self.binaryCE = binaryCE                 #-> use binary (instead of multiclass) prediction error
@@ -46,7 +47,12 @@ class Classifier(ContinualLearner, Replayer, ExemplarHandler):
         self.flatten = utils.Flatten()
 
         # fully connected hidden layers
-        self.fcE = MLP(input_size=image_channels*image_size**2, output_size=fc_units, layers=fc_layers-1,
+        if dataset == "ckplus": 
+            self.input_size = image_size[0] * image_size[1] * image_channels
+        else: 
+            self.input_size = image_channels*image_size**2
+
+        self.fcE = MLP(input_size=self.input_size, output_size=fc_units, layers=fc_layers-1,
                        hid_size=fc_units, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl, bias=bias,
                        excitability=excitability, excit_buffer=excit_buffer, gated=gated, latent_space=200)
         
@@ -64,7 +70,7 @@ class Classifier(ContinualLearner, Replayer, ExemplarHandler):
         return RootClassifier(
                 image_size=self.image_size, image_channels=self.image_channels, classes=self.classes, 
                 fc_layers=self.fc_layers, fc_units=self.fc_units,
-                fc_drop=self.fc_drop, fc_bn=self.fc_bn, fc_nl=self.fc_nl)
+                fc_drop=self.fc_drop, fc_bn=self.fc_bn, fc_nl=self.fc_nl, dataset=self.dataset)
     
     def get_sample_top(self): 
         return TopClassifier(classes=self.classes, 

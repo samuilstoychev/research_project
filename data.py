@@ -3,7 +3,7 @@ import numpy as np
 from torchvision import datasets, transforms
 from torch.utils.data import ConcatDataset, Dataset
 import torch
-
+from PIL import Image
 
 def _permutate_image_pixels(image, permutation):
     '''Permutate the pixels of an image according to [permutation].
@@ -29,13 +29,28 @@ def get_dataset(name, type='train', download=True, capacity=None, permutation=No
     dataset_class = AVAILABLE_DATASETS[data_name]
 
     # specify image-transformations to be applied
-    dataset_transform = transforms.Compose([
-        *AVAILABLE_TRANSFORMS[name],
-        transforms.Lambda(lambda x, p=permutation: _permutate_image_pixels(x, p)),
-    ])
 
     # load data-set
-    dataset = dataset_class('{dir}/{name}'.format(dir=dir, name=data_name), train=False if type=='test' else True,
+    if name == "ckplus": 
+        dataset_transform = transforms.Compose([
+            *AVAILABLE_TRANSFORMS[name][type], 
+            transforms.Lambda(lambda x, p=permutation: _permutate_image_pixels(x, p)),
+            ])
+
+        dataset = dataset_class(
+            root='/Users/samuilstoychev/ckplus_cropped/' + type, 
+            loader=lambda x: Image.open(x), 
+            extensions=["png"], 
+            transform=dataset_transform, 
+            target_transform=target_transform
+        )
+    else: 
+        dataset_transform = transforms.Compose([
+                *AVAILABLE_TRANSFORMS[name],
+                transforms.Lambda(lambda x, p=permutation: _permutate_image_pixels(x, p)),
+            ])
+
+        dataset = dataset_class('{dir}/{name}'.format(dir=dir, name=data_name), train=False if type=='test' else True,
                             download=download, transform=dataset_transform, target_transform=target_transform)
 
     # print information about dataset on the screen
@@ -143,6 +158,7 @@ class TransformedDataset(Dataset):
 # specify available data-sets.
 AVAILABLE_DATASETS = {
     'mnist': datasets.MNIST,
+    'ckplus': datasets.DatasetFolder
 }
 
 # specify available transforms.
@@ -154,12 +170,27 @@ AVAILABLE_TRANSFORMS = {
     'mnist28': [
         transforms.ToTensor(),
     ],
+    'ckplus': {
+        'train': [
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(10),  
+            transforms.Grayscale(), 
+            transforms.Resize((32, 32)), 
+            transforms.ToTensor()
+        ], 
+        'test': [
+            transforms.Grayscale(), 
+            transforms.Resize((32, 32)), 
+            transforms.ToTensor()
+        ]
+    }
 }
 
 # specify configurations of available data-sets.
 DATASET_CONFIGS = {
     'mnist': {'size': 32, 'channels': 1, 'classes': 10},
     'mnist28': {'size': 28, 'channels': 1, 'classes': 10},
+    'ckplus': {'size': (32, 32), 'channels': 1, 'classes': 8}
 }
 
 
@@ -221,7 +252,7 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
             
             # NOTE: If required, take a slice from mnist_train and leave it for root pre-training. 
             if split_ratio is not None: 
-                mnist_train, mnist_pretrain = torch.utils.data.random_split(mnist_train, split_ratio)
+                mnist_train, pretrain_dataset = torch.utils.data.random_split(mnist_train, split_ratio)
 
             mnist_test = get_dataset('mnist', type="test", dir=data_dir, target_transform=target_transform,
                                      verbose=verbose)
@@ -238,6 +269,40 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
                 ) if scenario=='domain' else None
                 train_datasets.append(SubDataset(mnist_train, labels, target_transform=target_transform))
                 test_datasets.append(SubDataset(mnist_test, labels, target_transform=target_transform))
+    elif name == 'splitCKPLUS': 
+        # check for number of tasks
+        if tasks>8:
+            raise ValueError("Experiment 'splitCKPLUS' cannot have more than 8 tasks!")
+        # configurations
+        config = DATASET_CONFIGS['ckplus']
+        classes_per_task = int(np.floor(8 / tasks))
+        if not only_config:
+            # prepare permutation to shuffle label-ids (to create different class batches for each random seed)
+            permutation = np.array(list(range(8))) if exception else np.random.permutation(list(range(8)))
+            target_transform = transforms.Lambda(lambda y, p=permutation: int(p[y]))
+            # prepare train and test datasets with all classes
+            ckplus_train = get_dataset('ckplus', type="train", dir=data_dir, target_transform=target_transform,
+                                      verbose=verbose)
+                        
+            # NOTE: If required, take a slice from mnist_train and leave it for root pre-training. 
+            if split_ratio is not None: 
+                ckplus_train, pretrain_dataset = torch.utils.data.random_split(ckplus_train, split_ratio)
+
+            ckplus_test = get_dataset('ckplus', type="test", dir=data_dir, target_transform=target_transform,
+                                     verbose=verbose)
+            # generate labels-per-task
+            labels_per_task = [
+                list(np.array(range(classes_per_task)) + classes_per_task * task_id) for task_id in range(tasks)
+            ]
+            # split them up into sub-tasks
+            train_datasets = []
+            test_datasets = []
+            for labels in labels_per_task:
+                target_transform = transforms.Lambda(
+                    lambda y, x=labels[0]: y - x
+                ) if scenario=='domain' else None
+                train_datasets.append(SubDataset(ckplus_train, labels, target_transform=target_transform))
+                test_datasets.append(SubDataset(ckplus_test, labels, target_transform=target_transform))
     else:
         raise RuntimeError('Given undefined experiment: {}'.format(name))
 
@@ -246,5 +311,5 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
 
     # Return tuple of train-, validation- and test-dataset, config-dictionary and number of classes per task
     if split_ratio is not None: 
-        return config if only_config else ((train_datasets, test_datasets), config, classes_per_task, mnist_pretrain)
+        return config if only_config else ((train_datasets, test_datasets), config, classes_per_task, pretrain_dataset)
     return config if only_config else ((train_datasets, test_datasets), config, classes_per_task)
