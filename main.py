@@ -136,6 +136,7 @@ latent_params.add_argument('--pretrain-baseline', action='store_true')
 latent_params.add_argument('--out-channels', type=int, default=5)
 latent_params.add_argument('--kernel-size', type=int, default=5)
 latent_params.add_argument('--pretrain-iters', type=int, default=1000)
+latent_params.add_argument('--data-augmentation', action='store_true')
 
 ramu = RAMU()
 cpuu = CPUUsage()
@@ -229,7 +230,8 @@ def run(args, verbose=False):
 
     (train_datasets, test_datasets), config, classes_per_task, pretrain_dataset = get_multitask_experiment(
         name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
-        verbose=verbose, exception=True if args.seed==0 else False, split_ratio=split_ratio
+        verbose=verbose, exception=True if args.seed==0 else False, split_ratio=split_ratio, 
+        data_augmentation=args.data_augmentation
     )
     
     print("RAM AFTER LOADING DATA:", ramu.compute("RAM AFTER LOADING DATA"))
