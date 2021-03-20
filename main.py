@@ -45,7 +45,7 @@ parser.add_argument('--results-dir', type=str, default='./results', dest='r_dir'
 
 # expirimental task parameters
 task_params = parser.add_argument_group('Task Parameters')
-task_params.add_argument('--experiment', type=str, default='splitMNIST', choices=['permMNIST', 'splitMNIST'])
+task_params.add_argument('--experiment', type=str, default='splitMNIST', choices=['permMNIST', 'splitMNIST', 'splitCKPLUS'])
 task_params.add_argument('--scenario', type=str, default='class', choices=['task', 'domain', 'class'])
 task_params.add_argument('--tasks', type=int, help='number of tasks')
 
@@ -135,6 +135,7 @@ latent_params.add_argument('--latent-size', type=int, default=200)
 latent_params.add_argument('--pretrain-baseline', action='store_true')
 latent_params.add_argument('--out-channels', type=int, default=5)
 latent_params.add_argument('--kernel-size', type=int, default=5)
+latent_params.add_argument('--pretrain-iters', type=int, default=1000)
 
 ramu = RAMU()
 cpuu = CPUUsage()
@@ -222,9 +223,13 @@ def run(args, verbose=False):
     if verbose:
         print("\nPreparing the data...")
 
-    (train_datasets, test_datasets), config, classes_per_task, mnist_pretrain = get_multitask_experiment(
+    # NOTE: CK+ has 1050 training examples and 258 test examples. 
+    split_ratio = [750, 300] if args.experiment=="splitCKPLUS" else [50000, 10000]
+    print("SPLIT RATIO:", split_ratio)
+
+    (train_datasets, test_datasets), config, classes_per_task, pretrain_dataset = get_multitask_experiment(
         name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
-        verbose=verbose, exception=True if args.seed==0 else False, split_ratio=[50000, 10000]
+        verbose=verbose, exception=True if args.seed==0 else False, split_ratio=split_ratio
     )
     
     print("RAM AFTER LOADING DATA:", ramu.compute("RAM AFTER LOADING DATA"))
@@ -238,12 +243,14 @@ def run(args, verbose=False):
             root_model = RootClassifier(
                 image_size=config['size'], image_channels=config['channels'], classes=config['classes'], 
                 fc_layers=args.fc_lay, fc_units=args.fc_units,
-                fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
+                fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl, 
+                dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
             ).to(device)
         elif args.network == "cnn": 
             root_model = CNNRootClassifier(image_size=config['size'], classes=config['classes'], 
                                            latent_space=args.latent_size, out_channels=args.out_channels, 
-                                           kernel_size=args.kernel_size).to(device)
+                                           kernel_size=args.kernel_size, 
+                                           dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist").to(device)
 
         root_model.optim_list = [{'params': filter(lambda p: p.requires_grad, root_model.parameters()), 'lr': args.lr}]
         root_model.optim_type = args.optimizer
@@ -282,14 +289,16 @@ def run(args, verbose=False):
         model = CNNClassifier(
             image_size=config['size'], classes=config['classes'], latent_space=args.latent_size, 
             binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
-            out_channels=args.out_channels, kernel_size=args.kernel_size
+            out_channels=args.out_channels, kernel_size=args.kernel_size, 
+            dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
         ).to(device)
     else:
         model = Classifier(
             image_size=config['size'], image_channels=config['channels'], classes=config['classes'],
             fc_layers=args.fc_lay, fc_units=args.fc_units, fc_drop=args.fc_drop, fc_nl=args.fc_nl,
             fc_bn=True if args.fc_bn=="yes" else False, excit_buffer=True if args.xdg and args.gating_prop>0 else False,
-            binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
+            binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem, 
+            dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
         ).to(device)
 
     # Define optimizer (only include parameters that "requires_grad")
@@ -309,12 +318,14 @@ def run(args, verbose=False):
     #------------------------------#
     print("RAM BEFORE PRE-TRAINING", ramu.compute("BEFORE PRETRAINING"))
     if args.latent_replay == "on": 
-        pretrain_root(root_model, model, mnist_pretrain)
-        del mnist_pretrain
+        pretrain_root(root_model, model, pretrain_dataset, n_classes=config['classes'], 
+        batch_iterations=args.pretrain_iters)
+        del pretrain_dataset
         gc.collect()
     elif args.pretrain_baseline:
-        pretrain_baseline(model, mnist_pretrain)
-        del mnist_pretrain
+        pretrain_baseline(model, pretrain_dataset, n_classes=config['classes'], 
+        batch_iterations=args.pretrain_iters)
+        del pretrain_dataset
         gc.collect()
 
     print("RAM AFTER PRE-TRAINING", ramu.compute("AFTER PRETRAINING"))
@@ -396,6 +407,7 @@ def run(args, verbose=False):
                 image_size=config['size'], image_channels=config['channels'],
                 fc_layers=args.g_fc_lay, fc_units=args.g_fc_uni, z_dim=args.g_z_dim, classes=config['classes'],
                 fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
+                dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
             ).to(device)
         # -set optimizer(s)
         generator.optim_list = [{'params': filter(lambda p: p.requires_grad, generator.parameters()), 'lr': args.lr_gen}]
@@ -410,11 +422,12 @@ def run(args, verbose=False):
     print("RAM AFTER DECLARING GENERATOR:", ramu.compute("AFTER GENERATOR"))
 
     mac = MAC()
+    dummy_data = torch.rand(32, 1, config["size"][0], config["size"][1]) if args.experiment == "splitCKPLUS" else torch.rand(32, 1, config["size"], config["size"])
     if args.latent_replay == "on": 
-        print("MACs of root classifier", mac.compute(root_model, torch.rand(32, 1, 32, 32)))
-        print("MACs of top classifier:", mac.compute(top_model, root_model(torch.rand(32, 1, 32, 32))))
+        print("MACs of root classifier", mac.compute(root_model, dummy_data))
+        print("MACs of top classifier:", mac.compute(top_model, root_model(dummy_data)))
     else: 
-        print("MACs of model:", mac.compute(model, torch.rand(32, 1, 32, 32)))
+        print("MACs of model:", mac.compute(model, dummy_data))
 
     print("RAM BEFORE REPORTING:", ramu.compute("BEFORE REPORTING"))
 

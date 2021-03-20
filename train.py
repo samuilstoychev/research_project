@@ -358,26 +358,27 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
     peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
     print("PEAK TRAINING RAM:", peak_ramu)
 
-def pretrain_root(root_model, model, pretrain_dataset, batch_iterations=1000, batch_size=32): 
+def pretrain_root(root_model, model, pretrain_dataset, batch_iterations=1000, batch_size=32, n_classes=10): 
 
     model.train()
     # Use cuda?
     cuda = model._is_on_cuda()
     device = model._device()
 
-    # Note that we pre-train the model here using the `mnist_pretrain` slice that we have defined earlier. 
-    data_loader = iter(utils.get_data_loader(pretrain_dataset, 32, cuda=cuda, drop_last=True))
+    iters_left = 1
 
-    active_classes = list(range(10))
+    active_classes = list(range(n_classes))
     n_loads = 0 
 
     for batch_index in range(1, batch_iterations+1):
-        try:     
-            x, y = next(data_loader)                                #--> sample training data of current task
-            n_loads += 1
-        except: 
-            print("Finished pre-training after " + str(n_loads * batch_size) + " samples.")
-            break 
+        iters_left -= 1
+        if iters_left==0:
+            data_loader = iter(utils.get_data_loader(pretrain_dataset, batch_size, cuda=cuda, drop_last=True))
+            iters_left = len(data_loader)
+            
+        x, y = next(data_loader)                                #--> sample training data of current task
+        n_loads += 1
+         
         x, y = x.to(device), y.to(device)                           #--> transfer them to correct device
         model.train_a_batch(x, y, active_classes=active_classes)
 
@@ -390,7 +391,7 @@ def pretrain_root(root_model, model, pretrain_dataset, batch_iterations=1000, ba
         if name in root_params_dict: 
             root_params_dict[name].data.copy_(param.data)
 
-def pretrain_baseline(model, pretrain_dataset, batch_iterations=1000, batch_size=32): 
+def pretrain_baseline(model, pretrain_dataset, batch_iterations=1000, batch_size=32, n_classes=10): 
     model.train()
     # Use cuda?
     cuda = model._is_on_cuda()
@@ -406,18 +407,20 @@ def pretrain_baseline(model, pretrain_dataset, batch_iterations=1000, batch_size
     model_params_dict = dict(model.named_parameters())
 
     # Note that we pre-train the model here using the `mnist_pretrain` slice that we have defined earlier. 
-    data_loader = iter(utils.get_data_loader(pretrain_dataset, 32, cuda=cuda, drop_last=True))
+    iters_left = 1
 
-    active_classes = list(range(10))
+    active_classes = list(range(n_classes))
     n_loads = 0 
 
     for batch_index in range(1, batch_iterations+1):
-        try:     
-            x, y = next(data_loader)                                #--> sample training data of current task
-            n_loads += 1
-        except: 
-            print("Finished pre-training after " + str(n_loads * batch_size) + " samples.")
-            break 
+        iters_left -= 1
+        if iters_left==0:
+            data_loader = iter(utils.get_data_loader(pretrain_dataset, batch_size, cuda=cuda, drop_last=True))
+            iters_left = len(data_loader)
+            
+        x, y = next(data_loader)                                #--> sample training data of current task
+        n_loads += 1
+         
         x, y = x.to(device), y.to(device)                           #--> transfer them to correct device
         model.train_a_batch(x, y, active_classes=active_classes)
 

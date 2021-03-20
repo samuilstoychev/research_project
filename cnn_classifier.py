@@ -13,7 +13,7 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
     '''Model for classifying images, "enriched" as "ContinualLearner"-, Replayer- and ExemplarHandler-object.'''
 
     def __init__(self, image_size, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False, 
-                 out_channels=5, kernel_size=5):
+                 out_channels=5, kernel_size=5, dataset="mnist"):
 
         # configurations
         super().__init__()
@@ -23,7 +23,12 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
         self.image_size = image_size
         self.out_channels = out_channels
         self.kernel_size = kernel_size
-        self.flattened_size = int(((image_size - 2*(kernel_size-1)) ** 2) * (0.25 * out_channels))
+        self.dataset = dataset
+
+        if dataset == "ckplus": 
+            self.flattened_size = int((image_size[0] - 2*(kernel_size-1)) * (image_size[1] - 2*(kernel_size-1)) * 0.25 * out_channels)
+        else: 
+            self.flattened_size = int(((image_size - 2*(kernel_size-1)) ** 2) * (0.25 * out_channels))
         # settings for training
         self.binaryCE = binaryCE                 #-> use binary (instead of multiclass) prediction error
         self.binaryCE_distill = binaryCE_distill #-> for classes from previous tasks, use the by the previous model
@@ -56,7 +61,8 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
     def get_sample_root(self): 
         return CNNRootClassifier(self.image_size, self.classes, self.latent_space, 
                                  self.binaryCE, self.binaryCE_distill, self.AGEM, 
-                                 out_channels=self.out_channels, kernel_size=self.kernel_size)
+                                 out_channels=self.out_channels, kernel_size=self.kernel_size, 
+                                 dataset=self.dataset)
     
     def get_sample_top(self): 
         return CNNTopClassifier(self.classes, self.latent_space, 
