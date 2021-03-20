@@ -22,21 +22,20 @@ def _permutate_image_pixels(image, permutation):
 
 
 def get_dataset(name, type='train', download=True, capacity=None, permutation=None, dir='./datasets',
-                verbose=False, target_transform=None):
+                verbose=False, target_transform=None, data_augmentation=False):
     '''Create [train|valid|test]-dataset.'''
 
     data_name = 'mnist' if name=='mnist28' else name
     dataset_class = AVAILABLE_DATASETS[data_name]
 
     # specify image-transformations to be applied
+    dataset_transform = transforms.Compose([
+        *get_available_transforms(name, type, data_augmentation), 
+        transforms.Lambda(lambda x, p=permutation: _permutate_image_pixels(x, p)),
+    ])
 
     # load data-set
     if name == "ckplus": 
-        dataset_transform = transforms.Compose([
-            *AVAILABLE_TRANSFORMS[name][type], 
-            transforms.Lambda(lambda x, p=permutation: _permutate_image_pixels(x, p)),
-            ])
-
         dataset = dataset_class(
             root='/Users/samuilstoychev/ckplus_cropped/' + type, 
             loader=lambda x: Image.open(x), 
@@ -45,11 +44,6 @@ def get_dataset(name, type='train', download=True, capacity=None, permutation=No
             target_transform=target_transform
         )
     else: 
-        dataset_transform = transforms.Compose([
-                *AVAILABLE_TRANSFORMS[name],
-                transforms.Lambda(lambda x, p=permutation: _permutate_image_pixels(x, p)),
-            ])
-
         dataset = dataset_class('{dir}/{name}'.format(dir=dir, name=data_name), train=False if type=='test' else True,
                             download=download, transform=dataset_transform, target_transform=target_transform)
 
@@ -161,30 +155,34 @@ AVAILABLE_DATASETS = {
     'ckplus': datasets.DatasetFolder
 }
 
-# specify available transforms.
-AVAILABLE_TRANSFORMS = {
-    'mnist': [
-        transforms.Pad(2),
-        transforms.ToTensor(),
-    ],
-    'mnist28': [
-        transforms.ToTensor(),
-    ],
-    'ckplus': {
-        'train': [
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(10),  
-            transforms.Grayscale(), 
-            transforms.Resize((32, 32)), 
-            transforms.ToTensor()
-        ], 
-        'test': [
-            transforms.Grayscale(), 
-            transforms.Resize((32, 32)), 
-            transforms.ToTensor()
-        ]
-    }
-}
+def get_available_transforms(dataset, mode="train", data_augmentation=False): 
+    if dataset == 'mnist': 
+        return [ transforms.Pad(2), transforms.ToTensor() ]
+    if dataset == 'mnist28': 
+        return [ transforms.ToTensor() ]
+    if dataset == 'ckplus': 
+        if data_augmentation == False: 
+            return [
+                transforms.Grayscale(), 
+                transforms.Resize((32, 32)), 
+                transforms.ToTensor(), 
+            ]
+        # Otherwise, if data augmentation is turned on ... 
+        elif mode == 'train': 
+            return [
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomRotation(10),  
+                transforms.Grayscale(), 
+                transforms.Resize((32, 32)), 
+                transforms.ToTensor(), 
+            ]
+        elif mode == 'test': 
+            return [
+                transforms.Grayscale(), 
+                transforms.Resize((32, 32)), 
+                transforms.ToTensor(), 
+            ]
+    raise Exception("Transforms not found!")
 
 # specify configurations of available data-sets.
 DATASET_CONFIGS = {
@@ -198,7 +196,7 @@ DATASET_CONFIGS = {
 
 
 def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_config=False, verbose=False,
-                             exception=False, split_ratio=None):
+                             exception=False, split_ratio=None, data_augmentation=False):
     '''Load, organize and return train- and test-dataset for requested experiment.
 
     [exception]:    <bool>; if True, for visualization no permutation is applied to first task (permMNIST) or digits
@@ -282,14 +280,14 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
             target_transform = transforms.Lambda(lambda y, p=permutation: int(p[y]))
             # prepare train and test datasets with all classes
             ckplus_train = get_dataset('ckplus', type="train", dir=data_dir, target_transform=target_transform,
-                                      verbose=verbose)
+                                      verbose=verbose, data_augmentation=data_augmentation)
                         
             # NOTE: If required, take a slice from mnist_train and leave it for root pre-training. 
             if split_ratio is not None: 
                 ckplus_train, pretrain_dataset = torch.utils.data.random_split(ckplus_train, split_ratio)
 
             ckplus_test = get_dataset('ckplus', type="test", dir=data_dir, target_transform=target_transform,
-                                     verbose=verbose)
+                                     verbose=verbose, data_augmentation=data_augmentation)
             # generate labels-per-task
             labels_per_task = [
                 list(np.array(range(classes_per_task)) + classes_per_task * task_id) for task_id in range(tasks)
