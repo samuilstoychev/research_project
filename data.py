@@ -39,7 +39,7 @@ def get_dataset(name, type='train', download=True, capacity=None, permutation=No
         dataset = dataset_class(
             root='/Users/samuilstoychev/ckplus_cropped/' + type, 
             loader=lambda x: Image.open(x), 
-            extensions=["png"], 
+            extensions=("png",), 
             transform=dataset_transform, 
             target_transform=target_transform
         )
