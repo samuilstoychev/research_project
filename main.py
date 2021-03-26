@@ -34,6 +34,8 @@ from CL_metrics_CLAIR import RAMU
 from CL_metrics_CLAIR import CPUUsage
 from CL_metrics_CLAIR import MAC
 import gc
+import torchvision.models as models
+from vgg_classifier import VGGClassifier
 
 parser = argparse.ArgumentParser('./main.py', description='Run individual continual learning experiment.')
 parser.add_argument('--get-stamp', action='store_true', help='print param-stamp & exit')
@@ -137,6 +139,7 @@ latent_params.add_argument('--out-channels', type=int, default=5)
 latent_params.add_argument('--kernel-size', type=int, default=5)
 latent_params.add_argument('--pretrain-iters', type=int, default=1000)
 latent_params.add_argument('--data-augmentation', action='store_true')
+latent_params.add_argument('--vgg-root', action='store_true')
 
 ramu = RAMU()
 cpuu = CPUUsage()
@@ -213,6 +216,17 @@ def run(args, verbose=False):
     if cuda:
         torch.cuda.manual_seed(args.seed)
 
+    if args.vgg_root: 
+        vgg16 = models.vgg16(pretrained=True)
+
+    def vgg_feature_extractor(x):
+        x = vgg16.features(x)
+        x = vgg16.avgpool(x)
+        x = torch.flatten(x, 1)
+        # Reduce space to 4096
+        x = vgg16.classifier[0](x)
+        x = torch.sigmoid(x)
+        return x
 
     #-------------------------------------------------------------------------------------------------#
 
@@ -225,13 +239,19 @@ def run(args, verbose=False):
         print("\nPreparing the data...")
 
     # NOTE: CK+ has 1050 training examples and 258 test examples. 
-    split_ratio = [750, 300] if args.experiment=="splitCKPLUS" else [50000, 10000]
+    if args.experiment=="splitCKPLUS": 
+        if args.vgg_root: 
+            split_ratio = [1050, 0]
+        else: 
+            split_ratio = [750, 300]
+    else: 
+        split_ratio = [50000, 10000]
     print("SPLIT RATIO:", split_ratio)
 
     (train_datasets, test_datasets), config, classes_per_task, pretrain_dataset = get_multitask_experiment(
         name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
         verbose=verbose, exception=True if args.seed==0 else False, split_ratio=split_ratio, 
-        data_augmentation=args.data_augmentation
+        data_augmentation=args.data_augmentation, vgg=args.vgg_root
     )
     
     print("RAM AFTER LOADING DATA:", ramu.compute("RAM AFTER LOADING DATA"))
@@ -287,6 +307,12 @@ def run(args, verbose=False):
             fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
         ).to(device)
         model.lamda_pl = 1. #--> to make that this VAE is also trained to classify
+    elif args.vgg_root: 
+        model = VGGClassifier(
+            classes=config['classes'], latent_space=args.latent_size, 
+            binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
+            out_channels=args.out_channels, kernel_size=args.kernel_size
+        ).to(device)
     elif args.network == "cnn": 
         model = CNNClassifier(
             image_size=config['size'], classes=config['classes'], latent_space=args.latent_size, 
@@ -320,11 +346,14 @@ def run(args, verbose=False):
     #------------------------------#
     print("RAM BEFORE PRE-TRAINING", ramu.compute("BEFORE PRETRAINING"))
     if args.latent_replay == "on": 
-        pretrain_root(root_model, model, pretrain_dataset, n_classes=config['classes'], 
-        batch_iterations=args.pretrain_iters)
-        del pretrain_dataset
-        gc.collect()
-    elif args.pretrain_baseline:
+        if args.vgg_root: 
+            root_model = vgg_feature_extractor
+        else: 
+            pretrain_root(root_model, model, pretrain_dataset, n_classes=config['classes'], 
+            batch_iterations=args.pretrain_iters)
+            del pretrain_dataset
+            gc.collect()
+    elif args.pretrain_baseline and not args.vgg_root:
         pretrain_baseline(model, pretrain_dataset, n_classes=config['classes'], 
         batch_iterations=args.pretrain_iters)
         del pretrain_dataset
@@ -405,8 +434,11 @@ def run(args, verbose=False):
                 fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
             ).to(device)
         else: 
+            gen_input_size = (100, 100) if args.vgg_root else config['size'] 
+            gen_channels = 3 if args.vgg_root else config['size'] 
+
             generator = AutoEncoder(
-                image_size=config['size'], image_channels=config['channels'],
+                image_size=gen_input_size, image_channels=gen_channels,
                 fc_layers=args.g_fc_lay, fc_units=args.g_fc_uni, z_dim=args.g_z_dim, classes=config['classes'],
                 fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
                 dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
@@ -424,7 +456,14 @@ def run(args, verbose=False):
     print("RAM AFTER DECLARING GENERATOR:", ramu.compute("AFTER GENERATOR"))
 
     mac = MAC()
-    dummy_data = torch.rand(32, 1, config["size"][0], config["size"][1]) if args.experiment == "splitCKPLUS" else torch.rand(32, 1, config["size"], config["size"])
+    if args.experiment == "splitCKPLUS": 
+        if args.vgg_root: 
+            dummy_data = torch.rand(32, 3, 100, 100)
+        else: 
+            dummy_data = torch.rand(32, 1, config["size"][0], config["size"][1])
+    else: 
+        dummy_data = torch.rand(32, 1, config["size"], config["size"])
+
     if args.latent_replay == "on": 
         print("MACs of root classifier", mac.compute(root_model, dummy_data))
         print("MACs of top classifier:", mac.compute(top_model, root_model(dummy_data)))
