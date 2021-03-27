@@ -9,12 +9,13 @@ from data import SubDataset, ExemplarDataset
 from continual_learner import ContinualLearner
 # Benchmarking 
 from CL_metrics_CLAIR import RAMU
+from naive_rehearsal import ReplayBuffer
 
 ramu = RAMU()
 
 def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes_per_task=None,iters=2000,batch_size=32,
              generator=None, gen_iters=0, gen_loss_cbs=list(), loss_cbs=list(), eval_cbs=list(), sample_cbs=list(),
-             use_exemplars=True, add_exemplars=False, metric_cbs=list()):
+             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000):
     '''Train a model (with a "train_a_batch" method) on multiple tasks, with replay-strategy specified by [replay_mode].
 
     [model]             <nn.Module> main model to optimize across all tasks
@@ -37,6 +38,9 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
     # Initiate possible sources for replay (no replay for 1st task)
     Exact = Generative = Current = False
     previous_model = None
+
+    if replay_mode == "naive-rehearsal": 
+        replay_buffer = ReplayBuffer(size=buffer_size, scenario=scenario)
 
     # Register starting param-values (needed for "intelligent synapses").
     if isinstance(model, ContinualLearner) and (model.si_c>0):
@@ -64,7 +68,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
             training_dataset = ConcatDataset([train_dataset, exemplar_dataset])
         else:
             training_dataset = train_dataset
-
+        
         # Prepare <dicts> to store running importance estimates and param-values before update ("Synaptic Intelligence")
         if isinstance(model, ContinualLearner) and (model.si_c>0):
             W = {}
@@ -241,9 +245,18 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
             #---> Train MAIN MODEL
             if batch_index <= iters:
                 peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
+                if replay_mode == "naive-rehearsal": 
+                    replayed_data = replay_buffer.replay(batch_size)
+                    if replayed_data: 
+                        x_, y_ = zip(*replayed_data)
+                        x_, y_ = torch.stack(x_), torch.tensor(y_)
+                        if scenario == "task": 
+                            y_ = [y_]
                 # Train the main model with this batch
                 loss_dict = model.train_a_batch(x, y, x_=x_, y_=y_, scores=scores, scores_=scores_,
                                                 active_classes=active_classes, task=task, rnt = 1./task)
+                if replay_mode == "naive-rehearsal": 
+                    replay_buffer.add(zip(x, y))
                 peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
                 # Update running parameter importance estimates in W
@@ -287,6 +300,8 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
 
 
         ##----------> UPON FINISHING EACH TASK...
+        if replay_mode == "naive-rehearsal": 
+            replay_buffer.update()
 
         # Close progres-bar(s)
         progress.close()
