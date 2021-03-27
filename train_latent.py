@@ -9,12 +9,13 @@ from data import SubDataset, ExemplarDataset
 from continual_learner import ContinualLearner
 # Benchmarking 
 from CL_metrics_CLAIR import RAMU
+from naive_rehearsal import ReplayBuffer
 
 ramu = RAMU()
 
 def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenario="class",classes_per_task=None,iters=2000,batch_size=32,
              generator=None, gen_iters=0, gen_loss_cbs=list(), loss_cbs=list(), eval_cbs=list(), sample_cbs=list(),
-             use_exemplars=True, add_exemplars=False, metric_cbs=list()):
+             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000):
     
     peak_ramu = ramu.compute("TRAINING")
     # Set model in training-mode
@@ -33,6 +34,10 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
     # Loop over all tasks.
     # NOTE: 1 means 'start indexing from 1'. So task goes from 1 to N. 
     # NOTE: This is TASK_LOOP - iterating over the different TASKS
+
+    if replay_mode == "naive-rehearsal": 
+        replay_buffer = ReplayBuffer(size=buffer_size, scenario=scenario)
+
     for task, train_dataset in enumerate(train_datasets, 1):
         peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
         
@@ -57,7 +62,8 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
 
         # Define tqdm progress bar(s)
         progress = tqdm.tqdm(range(1, iters+1))
-        progress_gen = tqdm.tqdm(range(1, gen_iters+1))
+        if generator: 
+            progress_gen = tqdm.tqdm(range(1, gen_iters+1))
 
         # Loop over all iterations
         # NOTE: Number of iterations specified in the function arguments. 
@@ -142,8 +148,17 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
             if batch_index <= iters:
                 # Train the main model with this batch
                 peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
+                if replay_mode == "naive-rehearsal": 
+                    replayed_data = replay_buffer.replay(batch_size)
+                    if replayed_data: 
+                        Rx_, y_ = zip(*replayed_data)
+                        Rx_, y_ = torch.stack(Rx_), torch.tensor(y_)
+                        if scenario == "task": 
+                            y_ = [y_]
                 loss_dict = model.train_a_batch(Rx, y, x_=Rx_, y_=y_, scores=scores, scores_=scores_,
                                                 active_classes=active_classes, task=task, rnt = 1./task)
+                if replay_mode == "naive-rehearsal": 
+                    replay_buffer.add(zip(Rx, y))
                 peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
                 # Fire callbacks (for visualization of training-progress / evaluating performance after each task)
@@ -163,7 +178,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
             #---> Train GENERATOR
             # NOTE: Again, remember that batch_index goes up to max(iters, gen_iters). 
             # So, we only train the generator as many times as we need (and not more). 
-            if batch_index <= gen_iters:
+            if batch_index <= gen_iters and generator:
 
                 # Train the generator with this batch
                 # NOTE: I think (and I hope) that the generator does not actually need `y` to be passed. 
@@ -175,7 +190,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
 
                 # Fire callbacks on each iteration
                 for loss_cb in gen_loss_cbs:
-                    if loss_cb is not None:
+                    if loss_cb is not None and generator:
                         loss_cb(progress_gen, batch_index, loss_dict, task=task)
                 for sample_cb in sample_cbs:
                     if sample_cb is not None:
@@ -184,10 +199,13 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
         # NOTE: This bit is still within the TASK_LOOP. That is, it executes after each loop iteration (i.e. after
         # each task has completed). 
         ##----------> UPON FINISHING EACH TASK...
+        if replay_mode == "naive-rehearsal": 
+            replay_buffer.update()
 
         # Close progres-bar(s)
         progress.close()
-        progress_gen.close()
+        if generator: 
+            progress_gen.close()
 
         # Calculate statistics required for metrics
         # NOTE: Those are statistics at a task (not batch) level. 
@@ -199,7 +217,8 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
         previous_model = copy.deepcopy(model).eval()
         # NOTE: VERY IMPORTANT - see how both Generative and previous_generator are initiated AFTER the first cycle. 
         # That is because the first iteration is 'special' - there is no 'previous' model to remember. 
-        Generative = True
-        previous_generator = copy.deepcopy(generator).eval() 
+        if generator: 
+            Generative = True
+            previous_generator = copy.deepcopy(generator).eval() 
         peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
     print("PEAK TRAINING RAM:", peak_ramu)

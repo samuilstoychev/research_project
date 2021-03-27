@@ -78,7 +78,7 @@ train_params.add_argument('--optimizer', type=str, choices=['adam', 'adam_reset'
 replay_params = parser.add_argument_group('Replay Parameters')
 replay_params.add_argument('--feedback', action="store_true", help="equip model with feedback connections")
 replay_params.add_argument('--z-dim', type=int, default=100, help='size of latent representation (default: 100)')
-replay_choices = ['offline', 'exact', 'generative', 'none', 'current', 'exemplars']
+replay_choices = ['offline', 'exact', 'generative', 'none', 'current', 'exemplars', 'naive-rehearsal']
 replay_params.add_argument('--replay', type=str, default='none', choices=replay_choices)
 replay_params.add_argument('--distill', action='store_true', help="use distillation for replay?")
 replay_params.add_argument('--temp', type=float, default=2., dest='temp', help="temperature for distillation")
@@ -140,6 +140,7 @@ latent_params.add_argument('--kernel-size', type=int, default=5)
 latent_params.add_argument('--pretrain-iters', type=int, default=1000)
 latent_params.add_argument('--data-augmentation', action='store_true')
 latent_params.add_argument('--vgg-root', action='store_true')
+latent_params.add_argument('--buffer-size', type=int, default=1000)
 
 ramu = RAMU()
 cpuu = CPUUsage()
@@ -435,7 +436,7 @@ def run(args, verbose=False):
             ).to(device)
         else: 
             gen_input_size = (100, 100) if args.vgg_root else config['size'] 
-            gen_channels = 3 if args.vgg_root else config['size'] 
+            gen_channels = 3 if args.vgg_root else config['channels'] 
 
             generator = AutoEncoder(
                 image_size=gen_input_size, image_channels=gen_channels,
@@ -594,6 +595,7 @@ def run(args, verbose=False):
             generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
             sample_cbs=sample_cbs, eval_cbs=eval_cbs, loss_cbs=generator_loss_cbs if args.feedback else solver_loss_cbs,
             metric_cbs=metric_cbs, use_exemplars=args.use_exemplars, add_exemplars=args.add_exemplars,
+            buffer_size=args.buffer_size
         )
     else: 
         train_cl(
@@ -602,6 +604,7 @@ def run(args, verbose=False):
             generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
             sample_cbs=sample_cbs, eval_cbs=eval_cbs, loss_cbs=generator_loss_cbs if args.feedback else solver_loss_cbs,
             metric_cbs=metric_cbs, use_exemplars=args.use_exemplars, add_exemplars=args.add_exemplars,
+            buffer_size=args.buffer_size
         )
     # Get total training-time in seconds, and write to file
     if args.time:
