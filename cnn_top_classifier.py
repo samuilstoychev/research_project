@@ -28,7 +28,7 @@ class CNNTopClassifier(ContinualLearner, Replayer, ExemplarHandler):
 
         self.dropout2 = nn.Dropout(0.5)
         self.fc1 = nn.Linear(latent_space, 128)
-        self.fc2 = nn.Linear(128, 10)
+        self.fc2 = nn.Linear(128, classes)
 
 
     def list_init_layers(self):

@@ -44,7 +44,7 @@ class CNNClassifier(ContinualLearner, Replayer, ExemplarHandler):
         self.dropout2 = nn.Dropout(0.5)
         self.fc0 = nn.Linear(self.flattened_size, self.latent_space)
         self.fc1 = nn.Linear(self.latent_space, 128)
-        self.fc2 = nn.Linear(128, 10)
+        self.fc2 = nn.Linear(128, classes)
 
     def list_init_layers(self):
         '''Return  list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''

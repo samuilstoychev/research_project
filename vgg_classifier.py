@@ -38,7 +38,7 @@ class VGGClassifier(ContinualLearner, Replayer, ExemplarHandler):
             param.requires_grad = False
         self.dropout2 = nn.Dropout(0.5)
         self.fc1 = nn.Linear(self.latent_space, 128)
-        self.fc2 = nn.Linear(128, 10)
+        self.fc2 = nn.Linear(128, classes)
 
     def list_init_layers(self):
         '''Return  list of modules whose parameters could be initialized differently (i.e., conv- or fc-layers).'''
