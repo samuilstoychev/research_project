@@ -10,12 +10,13 @@ from continual_learner import ContinualLearner
 # Benchmarking 
 from CL_metrics_CLAIR import RAMU
 from naive_rehearsal import ReplayBuffer
+import evaluate_latent
 
 ramu = RAMU()
 
 def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenario="class",classes_per_task=None,iters=2000,batch_size=32,
              generator=None, gen_iters=0, gen_loss_cbs=list(), loss_cbs=list(), eval_cbs=list(), sample_cbs=list(),
-             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000):
+             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000, valid_datasets=None):
     
     peak_ramu = ramu.compute("TRAINING")
     # Set model in training-mode
@@ -29,6 +30,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
     # NOTE: Those correspond to exact replay, generative replay and current replay
     Generative = False
     previous_model = None
+    prev_prec = 0.0
 
     # NOTE: We initalise `previous_generator` DURING the first iteration and AFTER the first reference
     # Loop over all tasks.
@@ -145,6 +147,18 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
             # NOTE: This will always hold as long as iters >= gen_iters 
             # Remember that batch_index goes up to max(iters, gen_iters). So the main model will no longer be trained 
             # if it has already been trained the required `iters` times. 
+
+            # Validation for early stopping 
+            if valid_datasets and batch_index % 100 == 1: 
+                prec = evaluate_latent.validate(
+                    model, valid_datasets[task-1], root=root, verbose=False, test_size=None, task=task, 
+                    allowed_classes=list(range(classes_per_task*(task-1), classes_per_task*(task))) if scenario=="task" else None
+                ) 
+                if prec - prev_prec < 0.0001: 
+                    prev_prec = 0.0
+                    break 
+                prev_prec = prec 
+
             if batch_index <= iters:
                 # Train the main model with this batch
                 peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))

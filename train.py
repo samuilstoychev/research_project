@@ -10,12 +10,13 @@ from continual_learner import ContinualLearner
 # Benchmarking 
 from CL_metrics_CLAIR import RAMU
 from naive_rehearsal import ReplayBuffer
+import evaluate
 
 ramu = RAMU()
 
 def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes_per_task=None,iters=2000,batch_size=32,
              generator=None, gen_iters=0, gen_loss_cbs=list(), loss_cbs=list(), eval_cbs=list(), sample_cbs=list(),
-             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000):
+             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000, valid_datasets=None):
     '''Train a model (with a "train_a_batch" method) on multiple tasks, with replay-strategy specified by [replay_mode].
 
     [model]             <nn.Module> main model to optimize across all tasks
@@ -38,6 +39,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
     # Initiate possible sources for replay (no replay for 1st task)
     Exact = Generative = Current = False
     previous_model = None
+    prev_prec = 0.0
 
     if replay_mode == "naive-rehearsal": 
         replay_buffer = ReplayBuffer(size=buffer_size, scenario=scenario)
@@ -241,6 +243,16 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                 scores_ = scores_ if (model.replay_targets == "soft") else None
                 peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
+            # Validation for early stopping 
+            if valid_datasets and batch_index % 100 == 1: 
+                prec = evaluate.validate(
+                    model, valid_datasets[task-1], verbose=False, test_size=None, task=task, 
+                    allowed_classes=list(range(classes_per_task*(task-1), classes_per_task*(task))) if scenario=="task" else None
+                ) 
+                if prec - prev_prec < 0.0001: 
+                    prev_prec = 0.0
+                    break 
+                prev_prec = prec 
 
             #---> Train MAIN MODEL
             if batch_index <= iters:
