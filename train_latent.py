@@ -86,10 +86,10 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
             peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
             # NOTE: x and y are the training data from the CURRENT task
             x, y = next(data_loader)                                    #--> sample training data of current task
-            Rx = root(x)
-            Rx = Rx.detach()
             y = y-classes_per_task*(task-1) if scenario=="task" else y  #--> ITL: adjust y-targets to 'active range'
             x, y = x.to(device), y.to(device)                           #--> transfer them to correct device
+            Rx = root(x)
+            Rx = Rx.detach()
             Rx = Rx.to(device)
             peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
             

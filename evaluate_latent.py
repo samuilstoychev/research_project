@@ -39,9 +39,9 @@ def validate(model, dataset, root=None, batch_size=128, test_size=1024, verbose=
             if total_tested >= test_size:
                 break
         # -evaluate model (if requested, only on [allowed_classes])
-        data = root(data)
         data, labels = data.to(model._device()), labels.to(model._device())
         labels = labels - allowed_classes[0] if (allowed_classes is not None) else labels
+        data = root(data)
         with torch.no_grad():
             if with_exemplars:
                 predicted = model.classify_with_exemplars(data, allowed_classes=allowed_classes)

@@ -243,9 +243,9 @@ def run(args, verbose=False):
     # NOTE: CK+ has 1050 training examples and 258 test examples. 
     if args.experiment=="splitCKPLUS": 
         if args.vgg_root: 
-            split_ratio = [1050, 0]
+            split_ratio = [924, 0]
         else: 
-            split_ratio = [750, 300]
+            split_ratio = [664, 260]
     else: 
         split_ratio = [50000, 10000]
     print("SPLIT RATIO:", split_ratio)
@@ -465,6 +465,7 @@ def run(args, verbose=False):
             dummy_data = torch.rand(32, 1, config["size"][0], config["size"][1])
     else: 
         dummy_data = torch.rand(32, 1, config["size"], config["size"])
+    dummy_data = dummy_data.to(device)
 
     if args.latent_replay == "on": 
         print("MACs of root classifier", mac.compute(root_model, dummy_data))
