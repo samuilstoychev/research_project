@@ -32,6 +32,7 @@ from cnn_root_classifier import CNNRootClassifier
 from cnn_top_classifier import CNNTopClassifier
 from CL_metrics_CLAIR import RAMU
 from CL_metrics_CLAIR import CPUUsage
+from CL_metrics_CLAIR import GPUUsage
 from CL_metrics_CLAIR import MAC
 import gc
 import torchvision.models as models
@@ -212,6 +213,8 @@ def run(args, verbose=False):
     device = torch.device("cuda" if cuda else "cpu")
     if verbose:
         print("CUDA is {}used".format("" if cuda else "NOT(!!) "))
+    if cuda: 
+        gpuu = GPUUsage(0)
     # Set random seeds
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -579,6 +582,8 @@ def run(args, verbose=False):
 
     print("RAM BEFORE TRAINING:", ramu.compute("BEFORE TRAINING"))
     print("CPU BEFORE TRAINING:", cpuu.compute("BEFORE TRAINING"))
+    if cuda: 
+        print("GPU BEFORE TRAINING:", gpuu.compute("BEFORE TRAINING"))
 
     #-------------------------------------------------------------------------------------------------#
 
@@ -618,6 +623,8 @@ def run(args, verbose=False):
 
     print("RAM BEFORE EVALUATION:", ramu.compute("BEFORE EVALUATION"))
     print("CPU BEFORE EVALUATION:", cpuu.compute("BEFORE EVALUATION"))
+    if cuda: 
+        print("GPU BEFORE EVALUATION:", gpuu.compute("BEFORE EVALUATION"))
 
     #-------------------------------------------------------------------------------------------------#
 
