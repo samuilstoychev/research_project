@@ -578,6 +578,7 @@ def run(args, verbose=False):
     ]
 
     print("RAM BEFORE TRAINING:", ramu.compute("BEFORE TRAINING"))
+    print("CPU BEFORE TRAINING:", cpuu.compute("BEFORE TRAINING"))
 
     #-------------------------------------------------------------------------------------------------#
 
@@ -616,6 +617,7 @@ def run(args, verbose=False):
         time_file.close()
 
     print("RAM BEFORE EVALUATION:", ramu.compute("BEFORE EVALUATION"))
+    print("CPU BEFORE EVALUATION:", cpuu.compute("BEFORE EVALUATION"))
 
     #-------------------------------------------------------------------------------------------------#
 
