@@ -213,8 +213,6 @@ def run(args, verbose=False):
     device = torch.device("cuda" if cuda else "cpu")
     if verbose:
         print("CUDA is {}used".format("" if cuda else "NOT(!!) "))
-    if cuda: 
-        gpuu = GPUUsage(0)
     # Set random seeds
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -304,6 +302,7 @@ def run(args, verbose=False):
     #------------------------------#
     #----- MODEL (CLASSIFIER) -----#
     #------------------------------#
+    print("RAM BEFORE CLASSIFER:", ramu.compute("BEFORE CLASSIFIER"))
     # Define main model (i.e., classifier, if requested with feedback connections)
     if args.feedback:
         model = AutoEncoder(
@@ -311,6 +310,7 @@ def run(args, verbose=False):
             fc_layers=args.fc_lay, fc_units=args.fc_units, z_dim=args.z_dim,
             fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
         ).to(device)
+        print("RAM AFTER CLASSIFER:", ramu.compute("AFTER CLASSIFIER"))
         model.lamda_pl = 1. #--> to make that this VAE is also trained to classify
     elif args.vgg_root: 
         model = VGGClassifier(
@@ -318,6 +318,7 @@ def run(args, verbose=False):
             binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
             out_channels=args.out_channels, kernel_size=args.kernel_size
         ).to(device)
+        print("RAM AFTER CLASSIFER:", ramu.compute("AFTER CLASSIFIER"))
     elif args.network == "cnn": 
         model = CNNClassifier(
             image_size=config['size'], classes=config['classes'], latent_space=args.latent_size, 
@@ -325,6 +326,7 @@ def run(args, verbose=False):
             out_channels=args.out_channels, kernel_size=args.kernel_size, 
             dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
         ).to(device)
+        print("RAM AFTER CLASSIFER:", ramu.compute("AFTER CLASSIFIER"))
     else:
         model = Classifier(
             image_size=config['size'], image_channels=config['channels'], classes=config['classes'],
@@ -333,6 +335,7 @@ def run(args, verbose=False):
             binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem, 
             dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
         ).to(device)
+        print("RAM AFTER CLASSIFER:", ramu.compute("AFTER CLASSIFIER"))
 
     # Define optimizer (only include parameters that "requires_grad")
     model.optim_list = [{'params': filter(lambda p: p.requires_grad, model.parameters()), 'lr': args.lr}]
@@ -428,6 +431,7 @@ def run(args, verbose=False):
         model.replay_targets = "soft" if args.distill else "hard"
         model.KD_temp = args.temp
 
+    print("RAM BEFORE GENERATOR:", ramu.compute("BEFORE GENERATOR"))
     # If needed, specify separate model for the generator
     train_gen = True if (args.replay=="generative" and not args.feedback) else False
     if train_gen:
@@ -580,10 +584,15 @@ def run(args, verbose=False):
                     scenario=scenario, with_exemplars=True) if args.use_exemplars else None
     ]
 
+    if args.latent_replay == "on":
+        del model
+        gc.collect()
+
     print("RAM BEFORE TRAINING:", ramu.compute("BEFORE TRAINING"))
     print("CPU BEFORE TRAINING:", cpuu.compute("BEFORE TRAINING"))
     if cuda: 
-        print("GPU BEFORE TRAINING:", gpuu.compute("BEFORE TRAINING"))
+        print("INITIALISING GPU TRACKER")
+        gpuu = GPUUsage(0)
 
     #-------------------------------------------------------------------------------------------------#
 
@@ -614,6 +623,9 @@ def run(args, verbose=False):
             metric_cbs=metric_cbs, use_exemplars=args.use_exemplars, add_exemplars=args.add_exemplars,
             buffer_size=args.buffer_size, valid_datasets=test_datasets if args.early_stop else None
         )
+    if cuda:
+        print("GPU BEFORE EVALUATION:", gpuu.compute("BEFORE EVALUATION"))
+
     # Get total training-time in seconds, and write to file
     if args.time:
         training_time = time.time() - start
@@ -623,8 +635,6 @@ def run(args, verbose=False):
 
     print("RAM BEFORE EVALUATION:", ramu.compute("BEFORE EVALUATION"))
     print("CPU BEFORE EVALUATION:", cpuu.compute("BEFORE EVALUATION"))
-    if cuda: 
-        print("GPU BEFORE EVALUATION:", gpuu.compute("BEFORE EVALUATION"))
 
     #-------------------------------------------------------------------------------------------------#
 

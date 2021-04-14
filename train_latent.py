@@ -167,8 +167,10 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
                     if replayed_data: 
                         Rx_, y_ = zip(*replayed_data)
                         Rx_, y_ = torch.stack(Rx_), torch.tensor(y_)
+                        Rx_ = Rx_.to(device)
+                        y_ = y_.to(device)
                         if scenario == "task": 
-                            y_ = [y_]
+                            y_ = [y_] 
                 loss_dict = model.train_a_batch(Rx, y, x_=Rx_, y_=y_, scores=scores, scores_=scores_,
                                                 active_classes=active_classes, task=task, rnt = 1./task)
                 if replay_mode == "naive-rehearsal": 

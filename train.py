@@ -262,6 +262,8 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                     if replayed_data: 
                         x_, y_ = zip(*replayed_data)
                         x_, y_ = torch.stack(x_), torch.tensor(y_)
+                        x_ = x_.to(device) 
+                        y_ = y_.to(device) 
                         if scenario == "task": 
                             y_ = [y_]
                 # Train the main model with this batch
