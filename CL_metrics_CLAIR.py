@@ -100,7 +100,7 @@ class GPUUsage:
 
     def __init__(self, gpu_id, every=10):
         # 'nvidia-smi --loop=1 --query-gpu=utilization.gpu --format=csv'
-        cmd = ['nvidia-smi', f'--loop={every}', '--query-gpu=utilization.gpu',
+        cmd = ['nvidia-smi', f'--loop={every}', '--query-gpu=utilization.gpu,memory.used',
                '--format=csv', f'--id={gpu_id}']
         # something long running
         try:
@@ -124,11 +124,18 @@ class GPUUsage:
         :param t: task id
         :return: float: average GPU usage
         """
+        init_mem = None
+        peak_mem = 0 
         while not self.lines_queue.empty():
             line = self.lines_queue.get()
             if line[0] == 'u':  # skip first line 'utilization.gpu [%]'
                 continue
-            usage = int(line.strip()[:-1])
+            usage, mem = line.strip().split(", ")
+            usage = int(usage[:-1])
+            mem = int(mem[:-3]) 
+            if init_mem is None: 
+                init_mem = mem 
+            peak_mem = max(peak_mem, mem) 
             self.n_measurements += 1
             self.avg_usage += usage
 
@@ -136,7 +143,8 @@ class GPUUsage:
             self.avg_usage /= float(self.n_measurements)
         self.log.info(f"Train Task {t} - average GPU usage: {self.avg_usage}%")
 
-        return self.avg_usage
+        print("Peak mem and init mem:", peak_mem, init_mem)
+        return (self.avg_usage, peak_mem - init_mem)
 
     def push_lines(self):
         while True:
