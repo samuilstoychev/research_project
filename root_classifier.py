@@ -47,7 +47,7 @@ class RootClassifier(ContinualLearner, Replayer, ExemplarHandler):
 
         self.fcE = MLP(input_size=self.input_size, output_size=fc_units, layers=fc_layers-1,
                        hid_size=fc_units, drop=fc_drop, batch_norm=fc_bn, nl=fc_nl, bias=bias,
-                       excitability=excitability, excit_buffer=excit_buffer, gated=gated, latent_space=200)
+                       excitability=excitability, excit_buffer=excit_buffer, gated=gated, latent_space=128)
 
 
     def list_init_layers(self):
