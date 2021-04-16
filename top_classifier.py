@@ -28,7 +28,7 @@ class TopClassifier(ContinualLearner, Replayer, ExemplarHandler):
                           #   the gradient of the current data (as in A-GEM, see Chaudry et al., 2019; ICLR)
 
         # classifier
-        self.classifier = fc_layer(200, classes, excit_buffer=True, nl='none', drop=fc_drop)
+        self.classifier = fc_layer(128, classes, excit_buffer=True, nl='none', drop=fc_drop)
 
 
     def list_init_layers(self):
