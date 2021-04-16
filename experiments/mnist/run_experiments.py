@@ -69,12 +69,10 @@ def run_experiments(scenario, gpu, early_stopping):
                 commands_to_run.append((cmd, filename))
     commands_to_run = np.random.permutation(commands_to_run) 
 
-    print("Now at:")
-    run_command(["echo", "$(pwd)"])
-
     n = len(commands_to_run)
     done = 0
-    for cmd, filename in commands_to_run: 
+    for cmd, filename in commands_to_run:
+        print("Executing cmd =", " ".join(cmd))
         run_command(["echo", " ".join(cmd)], filename)
         run_command(cmd, filename)
         done += 1
