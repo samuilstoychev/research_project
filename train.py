@@ -39,7 +39,6 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
     # Initiate possible sources for replay (no replay for 1st task)
     Exact = Generative = Current = False
     previous_model = None
-    prev_prec = 0.0
 
     if replay_mode == "naive-rehearsal": 
         replay_buffer = ReplayBuffer(size=buffer_size, scenario=scenario)
@@ -53,6 +52,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
 
     # Loop over all tasks.
     for task, train_dataset in enumerate(train_datasets, 1):
+        prev_prec = 0.0
         peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
         
         # If offline replay-setting, create large database of all tasks so far
@@ -249,7 +249,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                     model, valid_datasets[task-1], verbose=False, test_size=None, task=task, 
                     allowed_classes=list(range(classes_per_task*(task-1), classes_per_task*(task))) if scenario=="task" else None
                 ) 
-                if prec - prev_prec < 0.0001: 
+                if prec < prev_prec: 
                     prev_prec = 0.0
                     break 
                 prev_prec = prec 

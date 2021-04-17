@@ -30,7 +30,6 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
     # NOTE: Those correspond to exact replay, generative replay and current replay
     Generative = False
     previous_model = None
-    prev_prec = 0.0
 
     # NOTE: We initalise `previous_generator` DURING the first iteration and AFTER the first reference
     # Loop over all tasks.
@@ -41,6 +40,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
         replay_buffer = ReplayBuffer(size=buffer_size, scenario=scenario)
 
     for task, train_dataset in enumerate(train_datasets, 1):
+        prev_prec = 0.0
         peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
         
         # Find [active_classes]
@@ -154,7 +154,7 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
                     model, valid_datasets[task-1], root=root, verbose=False, test_size=None, task=task, 
                     allowed_classes=list(range(classes_per_task*(task-1), classes_per_task*(task))) if scenario=="task" else None
                 ) 
-                if prec - prev_prec < 0.0001: 
+                if prec < prev_prec:
                     prev_prec = 0.0
                     break 
                 prev_prec = prec 
