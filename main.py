@@ -220,7 +220,7 @@ def run(args, verbose=False):
         torch.cuda.manual_seed(args.seed)
 
     if args.vgg_root: 
-        vgg16 = models.vgg16(pretrained=True)
+        vgg16 = models.vgg16(pretrained=True).to(device)
 
     def vgg_feature_extractor(x):
         x = vgg16.features(x)
@@ -475,7 +475,8 @@ def run(args, verbose=False):
     dummy_data = dummy_data.to(device)
 
     if args.latent_replay == "on": 
-        print("MACs of root classifier", mac.compute(root_model, dummy_data))
+        if not args.vgg_root: 
+            print("MACs of root classifier", mac.compute(root_model, dummy_data))
         print("MACs of top classifier:", mac.compute(top_model, root_model(dummy_data)))
     else: 
         print("MACs of model:", mac.compute(model, dummy_data))
@@ -501,7 +502,10 @@ def run(args, verbose=False):
         # -main model
         if args.latent_replay == "on": 
             utils.print_model_info(top_model, title="TOP")
-            utils.print_model_info(root_model, title="ROOT")
+            if args.vgg_root:
+                print("ROOT = VGG-16")
+            else: 
+                utils.print_model_info(root_model, title="ROOT")
         else: 
             utils.print_model_info(model, title="MAIN MODEL")
         # -generator
