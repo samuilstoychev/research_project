@@ -477,7 +477,10 @@ def run(args, verbose=False):
     mac = MAC()
     if args.experiment == "splitCKPLUS": 
         if args.vgg_root: 
-            dummy_data = torch.rand(32, 3, 100, 100)
+            if args.use_vgg_face: 
+                dummy_data = torch.rand(32, 3, 224, 224)
+            else: 
+                dummy_data = torch.rand(32, 3, 100, 100)
         else: 
             dummy_data = torch.rand(32, 1, config["size"][0], config["size"][1])
     else: 
