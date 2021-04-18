@@ -37,6 +37,7 @@ from CL_metrics_CLAIR import MAC
 import gc
 import torchvision.models as models
 from vgg_classifier import VGGClassifier
+from vgg_face.vgg_face import VGG_FACE_16
 
 parser = argparse.ArgumentParser('./main.py', description='Run individual continual learning experiment.')
 parser.add_argument('--get-stamp', action='store_true', help='print param-stamp & exit')
@@ -143,6 +144,7 @@ latent_params.add_argument('--data-augmentation', action='store_true')
 latent_params.add_argument('--vgg-root', action='store_true')
 latent_params.add_argument('--buffer-size', type=int, default=1000)
 latent_params.add_argument('--early-stop', action='store_true')
+latent_params.add_argument('--use-vgg-face', action='store_true')
 
 ramu = RAMU()
 cpuu = CPUUsage()
@@ -219,17 +221,25 @@ def run(args, verbose=False):
     if cuda:
         torch.cuda.manual_seed(args.seed)
 
-    if args.vgg_root: 
-        vgg16 = models.vgg16(pretrained=True).to(device)
-
-    def vgg_feature_extractor(x):
-        x = vgg16.features(x)
-        x = vgg16.avgpool(x)
-        x = torch.flatten(x, 1)
-        # Reduce space to 4096
-        x = vgg16.classifier[0](x)
-        x = torch.sigmoid(x)
-        return x
+    if args.vgg_root:
+        if args.use_vgg_face:
+            vgg16 = VGG_FACE_16()
+            vgg16.load_weights()
+            vgg16 = vgg16.to(device)
+            def vgg_feature_extractor(x):
+                x = vgg16.extract_features(x)
+                x = torch.sigmoid(x)
+                return x
+        else:  
+            vgg16 = models.vgg16(pretrained=True).to(device)
+            def vgg_feature_extractor(x):
+                x = vgg16.features(x)
+                x = vgg16.avgpool(x)
+                x = torch.flatten(x, 1)
+                # Reduce space to 4096
+                x = vgg16.classifier[0](x)
+                x = torch.sigmoid(x)
+                return x
 
     #-------------------------------------------------------------------------------------------------#
 
@@ -316,7 +326,7 @@ def run(args, verbose=False):
         model = VGGClassifier(
             classes=config['classes'], latent_space=args.latent_size, 
             binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
-            out_channels=args.out_channels, kernel_size=args.kernel_size
+            out_channels=args.out_channels, kernel_size=args.kernel_size, face=args.use_vgg_face
         ).to(device)
         print("RAM AFTER CLASSIFER:", ramu.compute("AFTER CLASSIFIER"))
     elif args.network == "cnn": 

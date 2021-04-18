@@ -7,12 +7,13 @@ from continual_learner import ContinualLearner
 from replayer import Replayer
 import utils
 import torchvision.models as models
+from vgg_face.vgg_face import VGG_FACE_16
 
 class VGGClassifier(ContinualLearner, Replayer, ExemplarHandler):
     '''Model for classifying images, "enriched" as "ContinualLearner"-, Replayer- and ExemplarHandler-object.'''
 
     def __init__(self, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False, 
-                 out_channels=5, kernel_size=5):
+                 out_channels=5, kernel_size=5, face=False):
 
         # configurations
         super().__init__()
@@ -21,6 +22,7 @@ class VGGClassifier(ContinualLearner, Replayer, ExemplarHandler):
         self.latent_space = latent_space
         self.out_channels = out_channels
         self.kernel_size = kernel_size
+        self.face = face
 
         # settings for training
         self.binaryCE = binaryCE                 #-> use binary (instead of multiclass) prediction error
@@ -32,7 +34,11 @@ class VGGClassifier(ContinualLearner, Replayer, ExemplarHandler):
         ######------SPECIFY MODEL------######
         # From https://github.com/pytorch/examples/blob/master/mnist/main.py
         
-        self.vgg16 = models.vgg16(pretrained=True)
+        if not self.face: 
+            self.vgg16 = models.vgg16(pretrained=True)
+        else: 
+            self.vgg16 = VGG_FACE_16()
+            self.vgg16.load_weights()
         # Freeze vgg16's parameters
         for param in self.vgg16.parameters():
             param.requires_grad = False
@@ -54,27 +60,42 @@ class VGGClassifier(ContinualLearner, Replayer, ExemplarHandler):
         return "{}_c{}".format("VGG_CLASSIFIER", self.classes)
         
     def forward(self, x):
-        x = self.vgg16.features(x)
-        x = self.vgg16.avgpool(x)
-        x = torch.flatten(x, 1)
-        # Reduce space to 4096
-        x = self.vgg16.classifier[0](x)
-        x = torch.sigmoid(x)
-        x = self.fc1(x)
-        x = F.relu(x)
-        x = self.dropout2(x)
-        x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
-        return output
+        if not self.face: 
+            x = self.vgg16.features(x)
+            x = self.vgg16.avgpool(x)
+            x = torch.flatten(x, 1)
+            # Reduce space to 4096
+            x = self.vgg16.classifier[0](x)
+            x = torch.sigmoid(x)
+            x = self.fc1(x)
+            x = F.relu(x)
+            x = self.dropout2(x)
+            x = self.fc2(x)
+            output = F.log_softmax(x, dim=1)
+            return output
+        else: 
+            x = self.vgg16.extract_features(x)
+            x = torch.sigmoid(x)
+            x = self.fc1(x)
+            x = F.relu(x)
+            x = self.dropout2(x)
+            x = self.fc2(x)
+            output = F.log_softmax(x, dim=1)
+            return output
 
     def feature_extractor(self, x):
-        x = self.vgg16.features(x)
-        x = self.vgg16.avgpool(x)
-        x = torch.flatten(x, 1)
-        # Reduce space to 4096
-        x = self.vgg16.classifier[0](x)
-        x = torch.sigmoid(x)
-        return x
+        if not self.face: 
+            x = self.vgg16.features(x)
+            x = self.vgg16.avgpool(x)
+            x = torch.flatten(x, 1)
+            # Reduce space to 4096
+            x = self.vgg16.classifier[0](x)
+            x = torch.sigmoid(x)
+            return x
+        else: 
+            x = self.vgg16.extract_features(x)
+            x = torch.sigmoid(x)
+            return x
 
 
     def train_a_batch(self, x, y, scores=None, x_=None, y_=None, scores_=None, rnt=0.5, active_classes=None, task=1):
