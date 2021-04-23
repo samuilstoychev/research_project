@@ -3,7 +3,6 @@
 __author__ = "Pau Rodríguez López, ISELAB, CVC-UAB"
 __email__ = "pau.rodri1@gmail.com"
 
-import cv2
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

@@ -36,7 +36,7 @@ def run_experiments():
 
     commands_to_run = []
     for n_iterations in ["500", "1000", "2000", "3000"]: 
-        for g_fc_uni in ["200", "400", "800", "3200"]: 
+        for g_fc_uni in ["200", "400", "800", "1600", "3200"]: 
             for i in range(3): 
                 filename = n_iterations + "_" + g_fc_uni + "_" + str(i)
                 cmd = get_command(n_iterations, g_fc_uni)
