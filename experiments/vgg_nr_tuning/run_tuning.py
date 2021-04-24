@@ -10,7 +10,6 @@ def get_command(n_iterations, buffer_size):
     cmd = [
         "../../../main.py",
         "--replay=naive-rehearsal", 
-        "--latent-replay=on",
         "--time",
         "--scenario=task",
         "--experiment=splitCKPLUS",
