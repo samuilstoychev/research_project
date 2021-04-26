@@ -440,6 +440,9 @@ def run(args, verbose=False):
     if isinstance(model, Replayer):
         model.replay_targets = "soft" if args.distill else "hard"
         model.KD_temp = args.temp
+        if args.latent_replay == "on": 
+            top_model.replay_targets = "soft" if args.distill else "hard"
+            top_model.KD_temp = args.temp
 
     print("RAM BEFORE GENERATOR:", ramu.compute("BEFORE GENERATOR"))
     # If needed, specify separate model for the generator
