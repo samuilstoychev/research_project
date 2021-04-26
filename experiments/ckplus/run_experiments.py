@@ -18,7 +18,8 @@ def get_command(replay_method, seed):
             "--tasks=4", 
             "--network=cnn", 
             "--iters=1000", 
-            "--batch=32", 
+            "--batch=32",
+            "--lr=0.001",
             "--latent-size=4096", 
             "--vgg-root"
         ]
