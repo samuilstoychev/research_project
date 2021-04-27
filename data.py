@@ -37,7 +37,7 @@ def get_dataset(name, type='train', download=True, capacity=None, permutation=No
     # load data-set
     if name == "ckplus": 
         dataset = dataset_class(
-            root='/Users/samuilstoychev/ckplus_cropped/' + type, 
+            root='/home/ss2719/ckplus_cross_subject_cropped/' + type, 
             loader=lambda x: Image.open(x), 
             extensions=("png",), 
             transform=dataset_transform, 
@@ -165,7 +165,7 @@ def get_available_transforms(dataset, mode="train", data_augmentation=False, vgg
             if vgg: 
                 return [
                     transforms.Resize((100, 100)), 
-                    transforms.ToTensor(), 
+                    transforms.ToTensor(),
                 ]
             else: 
                 return [
@@ -194,7 +194,7 @@ def get_available_transforms(dataset, mode="train", data_augmentation=False, vgg
 DATASET_CONFIGS = {
     'mnist': {'size': 32, 'channels': 1, 'classes': 10},
     'mnist28': {'size': 28, 'channels': 1, 'classes': 10},
-    'ckplus': {'size': (32, 32), 'channels': 1, 'classes': 8}
+    'ckplus': {'size': (100, 100), 'channels': 1, 'classes': 8}
 }
 
 
