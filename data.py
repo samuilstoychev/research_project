@@ -43,6 +43,14 @@ def get_dataset(name, type='train', download=True, capacity=None, permutation=No
             transform=dataset_transform, 
             target_transform=target_transform
         )
+    elif name == "affectnet": 
+        dataset = dataset_class(
+            root='/home/ss2719/affectnet_preprocessed/' + type, 
+            loader=lambda x: Image.open(x), 
+            extensions=("jpg",), 
+            transform=dataset_transform, 
+            target_transform=target_transform
+        )
     else: 
         dataset = dataset_class('{dir}/{name}'.format(dir=dir, name=data_name), train=False if type=='test' else True,
                             download=download, transform=dataset_transform, target_transform=target_transform)
@@ -152,7 +160,8 @@ class TransformedDataset(Dataset):
 # specify available data-sets.
 AVAILABLE_DATASETS = {
     'mnist': datasets.MNIST,
-    'ckplus': datasets.DatasetFolder
+    'ckplus': datasets.DatasetFolder, 
+    'affectnet': datasets.DatasetFolder
 }
 
 def get_available_transforms(dataset, mode="train", data_augmentation=False, vgg=False): 
@@ -160,7 +169,7 @@ def get_available_transforms(dataset, mode="train", data_augmentation=False, vgg
         return [ transforms.Pad(2), transforms.ToTensor() ]
     if dataset == 'mnist28': 
         return [ transforms.ToTensor() ]
-    if dataset == 'ckplus': 
+    if dataset == 'ckplus' or dataset == 'affectnet': 
         if data_augmentation == False: 
             if vgg: 
                 return [
@@ -194,7 +203,8 @@ def get_available_transforms(dataset, mode="train", data_augmentation=False, vgg
 DATASET_CONFIGS = {
     'mnist': {'size': 32, 'channels': 1, 'classes': 10},
     'mnist28': {'size': 28, 'channels': 1, 'classes': 10},
-    'ckplus': {'size': (100, 100), 'channels': 1, 'classes': 8}
+    'ckplus': {'size': (100, 100), 'channels': 1, 'classes': 8},
+    'affectnet': {'size': (100, 100), 'channels': 1, 'classes': 8}
 }
 
 
@@ -307,6 +317,35 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
                 ) if scenario=='domain' else None
                 train_datasets.append(SubDataset(ckplus_train, labels, target_transform=target_transform))
                 test_datasets.append(SubDataset(ckplus_test, labels, target_transform=target_transform))
+    elif name == 'splitAffectNet': 
+        # check for number of tasks
+        if tasks>8:
+            raise ValueError("Experiment 'splitAffectNet' cannot have more than 8 tasks!")
+        # configurations
+        config = DATASET_CONFIGS['affectnet']
+        classes_per_task = int(np.floor(8 / tasks))
+        if not only_config:
+            # prepare permutation to shuffle label-ids (to create different class batches for each random seed)
+            permutation = np.array(list(range(8))) if exception else np.random.permutation(list(range(8)))
+            target_transform = transforms.Lambda(lambda y, p=permutation: int(p[y]))
+            # prepare train and test datasets with all classes
+            affectnet_train = get_dataset('affectnet', type="train", dir=data_dir, target_transform=target_transform,
+                                      verbose=verbose, data_augmentation=data_augmentation, vgg=vgg)
+            affectnet_test = get_dataset('affectnet', type="test", dir=data_dir, target_transform=target_transform,
+                                     verbose=verbose, data_augmentation=data_augmentation, vgg=vgg)
+            # generate labels-per-task
+            labels_per_task = [
+                list(np.array(range(classes_per_task)) + classes_per_task * task_id) for task_id in range(tasks)
+            ]
+            # split them up into sub-tasks
+            train_datasets = []
+            test_datasets = []
+            for labels in labels_per_task:
+                target_transform = transforms.Lambda(
+                    lambda y, x=labels[0]: y - x
+                ) if scenario=='domain' else None
+                train_datasets.append(SubDataset(affectnet_train, labels, target_transform=target_transform))
+                test_datasets.append(SubDataset(affectnet_test, labels, target_transform=target_transform))
     else:
         raise RuntimeError('Given undefined experiment: {}'.format(name))
 

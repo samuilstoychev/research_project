@@ -49,7 +49,7 @@ parser.add_argument('--results-dir', type=str, default='./results', dest='r_dir'
 
 # expirimental task parameters
 task_params = parser.add_argument_group('Task Parameters')
-task_params.add_argument('--experiment', type=str, default='splitMNIST', choices=['permMNIST', 'splitMNIST', 'splitCKPLUS'])
+task_params.add_argument('--experiment', type=str, default='splitMNIST', choices=['permMNIST', 'splitMNIST', 'splitCKPLUS', 'splitAffectNet'])
 task_params.add_argument('--scenario', type=str, default='class', choices=['task', 'domain', 'class'])
 task_params.add_argument('--tasks', type=int, help='number of tasks')
 
@@ -251,8 +251,9 @@ def run(args, verbose=False):
     if verbose:
         print("\nPreparing the data...")
 
-    # NOTE: CK+ has 1050 training examples and 258 test examples. 
-    if args.experiment=="splitCKPLUS": 
+    if args.experiments == "splitAffectNet": 
+        split_ratio = None 
+    elif args.experiment=="splitCKPLUS": 
         if args.vgg_root: 
             split_ratio = [924, 0]
         else: 
@@ -260,6 +261,13 @@ def run(args, verbose=False):
     else: 
         split_ratio = [50000, 10000]
     print("SPLIT RATIO:", split_ratio)
+
+    if args.experiments == "splitCKPLUS": 
+        dataset = "ckplus"
+    elif args.experiments == "splitAffectNet": 
+        dataset = "affectnet"
+    else: 
+        dataset = "mnist"
 
     (train_datasets, test_datasets), config, classes_per_task, pretrain_dataset = get_multitask_experiment(
         name=args.experiment, scenario=scenario, tasks=args.tasks, data_dir=args.d_dir,
@@ -279,13 +287,13 @@ def run(args, verbose=False):
                 image_size=config['size'], image_channels=config['channels'], classes=config['classes'], 
                 fc_layers=args.fc_lay, fc_units=args.fc_units,
                 fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl, 
-                dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
+                dataset=dataset
             ).to(device)
         elif args.network == "cnn": 
             root_model = CNNRootClassifier(image_size=config['size'], classes=config['classes'], 
                                            latent_space=args.latent_size, out_channels=args.out_channels, 
                                            kernel_size=args.kernel_size, 
-                                           dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist").to(device)
+                                           dataset=dataset).to(device)
 
         root_model.optim_list = [{'params': filter(lambda p: p.requires_grad, root_model.parameters()), 'lr': args.lr}]
         root_model.optim_type = args.optimizer
@@ -334,7 +342,7 @@ def run(args, verbose=False):
             image_size=config['size'], classes=config['classes'], latent_space=args.latent_size, 
             binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
             out_channels=args.out_channels, kernel_size=args.kernel_size, 
-            dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
+            dataset=dataset
         ).to(device)
         print("RAM AFTER CLASSIFER:", ramu.compute("AFTER CLASSIFIER"))
     else:
@@ -343,7 +351,7 @@ def run(args, verbose=False):
             fc_layers=args.fc_lay, fc_units=args.fc_units, fc_drop=args.fc_drop, fc_nl=args.fc_nl,
             fc_bn=True if args.fc_bn=="yes" else False, excit_buffer=True if args.xdg and args.gating_prop>0 else False,
             binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem, 
-            dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
+            dataset=dataset
         ).to(device)
         print("RAM AFTER CLASSIFER:", ramu.compute("AFTER CLASSIFIER"))
 
@@ -463,7 +471,7 @@ def run(args, verbose=False):
                 image_size=gen_input_size, image_channels=gen_channels,
                 fc_layers=args.g_fc_lay, fc_units=args.g_fc_uni, z_dim=args.g_z_dim, classes=config['classes'],
                 fc_drop=args.fc_drop, fc_bn=True if args.fc_bn=="yes" else False, fc_nl=args.fc_nl,
-                dataset="ckplus" if args.experiment=="splitCKPLUS" else "mnist"
+                dataset=dataset
             ).to(device)
         # -set optimizer(s)
         generator.optim_list = [{'params': filter(lambda p: p.requires_grad, generator.parameters()), 'lr': args.lr_gen}]
@@ -478,7 +486,7 @@ def run(args, verbose=False):
     print("RAM AFTER DECLARING GENERATOR:", ramu.compute("AFTER GENERATOR"))
 
     mac = MAC()
-    if args.experiment == "splitCKPLUS": 
+    if args.experiment == "splitCKPLUS" or args.experiment == "splitAffectNet": 
         if args.vgg_root: 
             if args.use_vgg_face: 
                 dummy_data = torch.rand(32, 3, 224, 224)

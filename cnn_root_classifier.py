@@ -22,7 +22,7 @@ class CNNRootClassifier(ContinualLearner, Replayer, ExemplarHandler):
         self.image_size = image_size
         self.out_channels = out_channels
         self.kernel_size = kernel_size
-        if dataset == "ckplus": 
+        if dataset == "ckplus" or dataset == "affectnet": 
             self.flattened_size = int((image_size[0] - 2*(kernel_size-1)) * (image_size[1] - 2*(kernel_size-1)) * 0.25 * out_channels)
         else: 
             self.flattened_size = int(((image_size - 2*(kernel_size-1)) ** 2) * (0.25 * out_channels))

@@ -41,7 +41,7 @@ class AutoEncoder(Replayer):
         # -flatten image to 2D-tensor
         self.flatten = utils.Flatten()
 
-        if dataset == "ckplus": 
+        if dataset == "ckplus" or dataset == "affectnet": 
             self.input_size = image_size[0] * image_size[1] * image_channels
         else: 
             self.input_size = image_channels*image_size**2

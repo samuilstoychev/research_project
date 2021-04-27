@@ -47,7 +47,7 @@ class Classifier(ContinualLearner, Replayer, ExemplarHandler):
         self.flatten = utils.Flatten()
 
         # fully connected hidden layers
-        if dataset == "ckplus": 
+        if dataset == "ckplus" or dataset == "affectnet": 
             self.input_size = image_size[0] * image_size[1] * image_channels
         else: 
             self.input_size = image_channels*image_size**2
