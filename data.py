@@ -45,7 +45,7 @@ def get_dataset(name, type='train', download=True, capacity=None, permutation=No
         )
     elif name == "affectnet": 
         dataset = dataset_class(
-            root='/home/ss2719/affectnet_preprocessed/' + type, 
+            root='/home/ss2719/affectnet_preprocessed_balanced/' + type, 
             loader=lambda x: Image.open(x), 
             extensions=("jpg",), 
             transform=dataset_transform, 

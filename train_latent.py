@@ -16,9 +16,10 @@ ramu = RAMU()
 
 def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenario="class",classes_per_task=None,iters=2000,batch_size=32,
              generator=None, gen_iters=0, gen_loss_cbs=list(), loss_cbs=list(), eval_cbs=list(), sample_cbs=list(),
-             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000, valid_datasets=None):
+             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000, valid_datasets=None, early_stop=False, validation=False):
     
     peak_ramu = ramu.compute("TRAINING")
+    valid_precs = []
     # Set model in training-mode
     model.train()
 
@@ -154,10 +155,13 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
                     model, valid_datasets[task-1], root=root, verbose=False, test_size=None, task=task, 
                     allowed_classes=list(range(classes_per_task*(task-1), classes_per_task*(task))) if scenario=="task" else None
                 ) 
-                if prec < prev_prec:
-                    prev_prec = 0.0
-                    break 
-                prev_prec = prec 
+                if validation: 
+                    valid_precs.append(prec)
+                if early_stop: 
+                    if prec < prev_prec:
+                        prev_prec = 0.0
+                        break 
+                    prev_prec = prec 
 
             if batch_index <= iters:
                 # Train the main model with this batch
@@ -237,4 +241,6 @@ def train_cl_latent(model, train_datasets, root=None, replay_mode="none", scenar
             Generative = True
             previous_generator = copy.deepcopy(generator).eval() 
         peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
+    if validation: 
+        print("VALIDATION PRECS:", valid_precs)
     print("PEAK TRAINING RAM:", peak_ramu)

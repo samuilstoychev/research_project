@@ -144,6 +144,7 @@ latent_params.add_argument('--data-augmentation', action='store_true')
 latent_params.add_argument('--vgg-root', action='store_true')
 latent_params.add_argument('--buffer-size', type=int, default=1000)
 latent_params.add_argument('--early-stop', action='store_true')
+latent_params.add_argument('--validation', action='store_true')
 latent_params.add_argument('--use-vgg-face', action='store_true')
 
 ramu = RAMU()
@@ -640,7 +641,8 @@ def run(args, verbose=False):
             generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
             sample_cbs=sample_cbs, eval_cbs=eval_cbs, loss_cbs=generator_loss_cbs if args.feedback else solver_loss_cbs,
             metric_cbs=metric_cbs, use_exemplars=args.use_exemplars, add_exemplars=args.add_exemplars,
-            buffer_size=args.buffer_size, valid_datasets=test_datasets if args.early_stop else None
+            buffer_size=args.buffer_size, valid_datasets=test_datasets if (args.early_stop or args.validation) else None, 
+            early_stop=args.early_stop, validation=args.validation
         )
     else: 
         train_cl(
@@ -649,7 +651,8 @@ def run(args, verbose=False):
             generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
             sample_cbs=sample_cbs, eval_cbs=eval_cbs, loss_cbs=generator_loss_cbs if args.feedback else solver_loss_cbs,
             metric_cbs=metric_cbs, use_exemplars=args.use_exemplars, add_exemplars=args.add_exemplars,
-            buffer_size=args.buffer_size, valid_datasets=test_datasets if args.early_stop else None
+            buffer_size=args.buffer_size, valid_datasets=test_datasets if (args.early_stop or args.validation) else None, 
+            early_stop=args.early_stop, validation=args.validation
         )
     if cuda:
         print("GPU BEFORE EVALUATION:", gpuu.compute("BEFORE EVALUATION"))

@@ -16,7 +16,7 @@ ramu = RAMU()
 
 def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes_per_task=None,iters=2000,batch_size=32,
              generator=None, gen_iters=0, gen_loss_cbs=list(), loss_cbs=list(), eval_cbs=list(), sample_cbs=list(),
-             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000, valid_datasets=None):
+             use_exemplars=True, add_exemplars=False, metric_cbs=list(), buffer_size=1000, valid_datasets=None, early_stop=False, validation=False):
     '''Train a model (with a "train_a_batch" method) on multiple tasks, with replay-strategy specified by [replay_mode].
 
     [model]             <nn.Module> main model to optimize across all tasks
@@ -29,6 +29,7 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
     [*_cbs]             <list> of call-back functions to evaluate training-progress'''
 
     peak_ramu = ramu.compute("TRAINING")
+    valid_precs = []
     # Set model in training-mode
     model.train()
 
@@ -249,10 +250,13 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                     model, valid_datasets[task-1], verbose=False, test_size=None, task=task, 
                     allowed_classes=list(range(classes_per_task*(task-1), classes_per_task*(task))) if scenario=="task" else None
                 ) 
-                if prec < prev_prec: 
-                    prev_prec = 0.0
-                    break 
-                prev_prec = prec 
+                if validation: 
+                    valid_precs.append(prec)
+                if early_stop: 
+                    if prec < prev_prec: 
+                        prev_prec = 0.0
+                        break 
+                    prev_prec = prec 
 
             #---> Train MAIN MODEL
             if batch_index <= iters:
@@ -385,6 +389,8 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                         ExemplarDataset(model.exemplar_sets, target_transform=target_transform)]
         peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
     peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
+    if validation: 
+        print("VALIDATION PRECS:", valid_precs)
     print("PEAK TRAINING RAM:", peak_ramu)
 
 def pretrain_root(root_model, model, pretrain_dataset, batch_iterations=1000, batch_size=32, n_classes=10): 
