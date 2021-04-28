@@ -251,7 +251,7 @@ def run(args, verbose=False):
     if verbose:
         print("\nPreparing the data...")
 
-    if args.experiments == "splitAffectNet": 
+    if args.experiment == "splitAffectNet": 
         split_ratio = None 
     elif args.experiment=="splitCKPLUS": 
         if args.vgg_root: 
@@ -262,9 +262,9 @@ def run(args, verbose=False):
         split_ratio = [50000, 10000]
     print("SPLIT RATIO:", split_ratio)
 
-    if args.experiments == "splitCKPLUS": 
+    if args.experiment == "splitCKPLUS": 
         dataset = "ckplus"
-    elif args.experiments == "splitAffectNet": 
+    elif args.experiment == "splitAffectNet": 
         dataset = "affectnet"
     else: 
         dataset = "mnist"

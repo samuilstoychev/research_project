@@ -338,6 +338,7 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
                 list(np.array(range(classes_per_task)) + classes_per_task * task_id) for task_id in range(tasks)
             ]
             # split them up into sub-tasks
+            pretrain_dataset = None
             train_datasets = []
             test_datasets = []
             for labels in labels_per_task:
@@ -353,6 +354,4 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
     config['classes'] = classes_per_task if scenario=='domain' else classes_per_task*tasks
 
     # Return tuple of train-, validation- and test-dataset, config-dictionary and number of classes per task
-    if split_ratio is not None: 
-        return config if only_config else ((train_datasets, test_datasets), config, classes_per_task, pretrain_dataset)
-    return config if only_config else ((train_datasets, test_datasets), config, classes_per_task)
+    return config if only_config else ((train_datasets, test_datasets), config, classes_per_task, pretrain_dataset)
