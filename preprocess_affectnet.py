@@ -3,6 +3,8 @@ import pandas as pd
 from PIL import Image
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
+# Set BALANCED to False to disable down-sampling
+BALANCED = True
 
 """
 Replace this variable with a list of top-level directories 
@@ -35,6 +37,12 @@ def listdir(path):
         if not f.startswith('.'):
             res.append(f)
     return res
+
+from numpy.random import default_rng
+def random_sample(images, n): 
+    """Randomly sample n items (without repetition)""" 
+    rng = default_rng()
+    return rng.choice(images, size=min(len(images), n), replace=False)
 
 # ==========================================================================
 # ========================= LOAD ANNOTATIONS ===============================
@@ -98,48 +106,86 @@ print("Number of test images:", len(test_images))
 print("Number of unannotated images:", len(unannotated_images))
 print()
 
+if BALANCED: 
+    train_images_by_class = dict()
+    for (folder, image_name, expression) in train_images: 
+        if expression not in train_images_by_class: 
+            train_images_by_class[expression] = [(folder, image_name)]
+        else: 
+            train_images_by_class[expression].append((folder, image_name))
+
+    MIN_SIZE = min([len(train_images_by_class[i]) for i in range(8)])
+
+    balanced_train_images = [random_sample(train_images_by_class[i], MIN_SIZE) for i in range(8)]
+
+    print("Balancing dataset to " + str(MIN_SIZE) + " images per class")
+
 # ==========================================================================
 # ======================= CREATE DESTINATION FOLDER ========================
 # ==========================================================================
 
-os.mkdir(PROCESSED_DATASET_DESTINATION + "affectnet_preprocessed")
-os.mkdir(PROCESSED_DATASET_DESTINATION + "affectnet_preprocessed/train")
-os.mkdir(PROCESSED_DATASET_DESTINATION + "affectnet_preprocessed/test")
+FOLDER_NAME = "affectnet_preprocessed_balanced" if BALANCED else "affectnet_preprocessed"
+
+os.mkdir(PROCESSED_DATASET_DESTINATION + FOLDER_NAME)
+os.mkdir(PROCESSED_DATASET_DESTINATION + FOLDER_NAME + "/train")
+os.mkdir(PROCESSED_DATASET_DESTINATION + FOLDER_NAME + "/test")
 
 for i in range(8): 
-    os.mkdir(PROCESSED_DATASET_DESTINATION + "affectnet_preprocessed/train/class_" + str(i))
-    os.mkdir(PROCESSED_DATASET_DESTINATION + "affectnet_preprocessed/test/class_" + str(i))
+    os.mkdir(PROCESSED_DATASET_DESTINATION + FOLDER_NAME + "/train/class_" + str(i))
+    os.mkdir(PROCESSED_DATASET_DESTINATION + FOLDER_NAME + "/test/class_" + str(i))
 
 # ==========================================================================
-# ============== CONVERT AND COPY IMAGES TO DESTINATION FOLDER =============
+# ============== CONVERT TRAIN IMAGES TO DESTINATION FOLDER ================
 # ==========================================================================
 
 done = 0 
 
-# Copying train images
-for (directory, image_name, expression) in train_images: 
-    try: 
-        # Only store images with a valid expression label
-        if expression < 8: 
-            source_path = directory + image_name 
-            dest_folder = PROCESSED_DATASET_DESTINATION + "affectnet_preprocessed/train/class_" + str(expression) 
-            # Converting all images to the .jpg extension
-            dest_path = dest_folder + "/" + image_name.split(".")[0] + ".jpg"
+if not BALANCED: 
+    for (directory, image_name, expression) in train_images: 
+        try: 
+            # Only store images with a valid expression label
+            if expression < 8: 
+                source_path = directory + image_name 
+                dest_folder = PROCESSED_DATASET_DESTINATION + FOLDER_NAME + "/train/class_" + str(expression) 
+                # Converting all images to the .jpg extension
+                dest_path = dest_folder + "/" + image_name.split(".")[0] + ".jpg"
 
-            im = Image.open(source_path)
-            im.save(dest_path)
-            done += 1
-            if done % 10000 == 0: 
-                print("Copied", done, "train images...")
-    except Exception as e: 
-        print("[ERROR] Failed to copy image", image_name, "located in", directory)
+                im = Image.open(source_path)
+                im.save(dest_path)
+                done += 1
+                if done % 1000 == 0: 
+                    print("Copied", done, "train images...")
+        except Exception as e: 
+            print("[ERROR] Failed to copy image", image_name, "located in", directory)
+            print(e)
+else: 
+    for expression in range(len(balanced_train_images)): 
+        for (directory, image_name) in balanced_train_images[expression]: 
+            try: 
+                # Only store images with a valid expression label
+                source_path = directory + image_name 
+                dest_folder = PROCESSED_DATASET_DESTINATION + FOLDER_NAME + "/train/class_" + str(expression) 
+                # Converting all images to the .jpg extension
+                dest_path = dest_folder + "/" + image_name.split(".")[0] + ".jpg"
 
-# Copying test images
+                im = Image.open(source_path)
+                im.save(dest_path)
+                done += 1
+                if done % 10000 == 0: 
+                    print("Copied", done, "train images...")
+            except Exception as e: 
+                print("[ERROR] Failed to copy image", image_name, "located in", directory)
+                print(e)
+
+# ==========================================================================
+# =============== CONVERT TEST IMAGES TO DESTINATION FOLDER ================
+# ==========================================================================
+
 for (directory, image_name, expression) in test_images: 
     try: 
         if expression < 8: 
             source_path = directory + image_name 
-            dest_folder = PROCESSED_DATASET_DESTINATION + "affectnet_preprocessed/test/class_" + str(expression) 
+            dest_folder = PROCESSED_DATASET_DESTINATION + FOLDER_NAME + "/test/class_" + str(expression) 
             # Converting all images to the .jpg extension
             dest_path = dest_folder + "/" + image_name.split(".")[0] + ".jpg"
 
@@ -150,4 +196,4 @@ for (directory, image_name, expression) in test_images:
         print(e)
         
 print("Preprocessing has completed. You can find the preprocessed dataset at:")
-print(PROCESSED_DATASET_DESTINATION + "affectnet_preprocessed")
+print(PROCESSED_DATASET_DESTINATION + FOLDER_NAME)
