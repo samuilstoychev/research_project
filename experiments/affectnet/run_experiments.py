@@ -17,7 +17,7 @@ def get_command(replay_method, seed):
             "--experiment=splitAffectNet",
             "--tasks=4", 
             "--network=cnn", 
-            "--iters=1000", 
+            "--iters=2000", 
             "--batch=32",
             "--lr=0.0001",
             "--latent-size=4096", 
@@ -25,21 +25,21 @@ def get_command(replay_method, seed):
         ]
         if replay_method == "nr": 
             cmd.append("--replay=naive-rehearsal")
-            cmd.append("--buffer-size=1000")
+            cmd.append("--buffer-size=1500")
         elif replay_method == "lr": 
             cmd.append("--replay=naive-rehearsal")
             cmd.append("--latent-replay=on")
-            cmd.append("--buffer-size=500")
+            cmd.append("--buffer-size=1000")
         elif replay_method == "gr":
             cmd.append("--replay=generative")
-            cmd.append("--g-fc-uni=800")
+            cmd.append("--g-fc-uni=1600")
         elif replay_method == "lgr": 
             cmd.append("--replay=generative")
             cmd.append("--latent-replay=on")
             cmd.append("--g-fc-uni=200")
         elif replay_method == "grd":
             cmd.append("--replay=generative")
-            cmd.append("--g-fc-uni=800")
+            cmd.append("--g-fc-uni=1600")
             cmd.append("--distill")
         elif replay_method == "lgrd": 
             cmd.append("--replay=generative")
