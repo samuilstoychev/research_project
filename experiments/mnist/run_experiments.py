@@ -32,10 +32,19 @@ def get_command(architecture, replay_method, scenario, gpu, early_stopping):
         if replay_method == "gr":
             cmd.append("--replay=generative")
             cmd.append("--pretrain-baseline")
+        elif replay_method == "grd": 
+            cmd.append("--replay=generative")
+            cmd.append("--pretrain-baseline")
+            cmd.append("--distill")
         elif replay_method == "lgr": 
             cmd.append("--replay=generative")
             cmd.append("--latent-replay=on")
             cmd.append("--g-fc-uni=128")
+        elif replay_method == "lgrd": 
+            cmd.append("--replay=generative")
+            cmd.append("--latent-replay=on")
+            cmd.append("--g-fc-uni=128")
+            cmd.append("--distill")
         elif replay_method == "nr": 
             cmd.append("--replay=naive-rehearsal")
             cmd.append("--pretrain-baseline")
@@ -62,7 +71,7 @@ def run_experiments(scenario, gpu, early_stopping):
 
     commands_to_run = []
     for architecture in ["mlp", "cnn"]: 
-        for replay_method in ["nr", "lr", "gr", "lgr"]: 
+        for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd"]: 
             for i in range(3): 
                 filename = architecture + "_" + replay_method + "_" + str(i)
                 cmd = get_command(architecture, replay_method, scenario, gpu, early_stopping)
