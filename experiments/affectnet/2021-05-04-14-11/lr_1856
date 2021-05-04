@@ -1,0 +1,64 @@
+../../../main.py --time --scenario=task --experiment=splitAffectNet --tasks=4 --network=cnn --iters=2000 --batch=32 --lr=0.0001 --latent-size=4096 --vgg-root --replay=naive-rehearsal --latent-replay=on --buffer-size=1000 --seed=1856
+RAM AT BEGINNING: 0.22353744506835938
+Latent replay turned on
+CUDA is used
+RAM BEFORE LOADING DATA: 2.18328857421875
+
+Preparing the data...
+SPLIT RATIO: None
+ --> affectnet: 'train'-dataset consisting of 30000 samples
+ --> affectnet: 'test'-dataset consisting of 4000 samples
+RAM AFTER LOADING DATA: 2.193187713623047
+RAM BEFORE CLASSIFER: 2.195148468017578
+RAM AFTER CLASSIFER: 2.2647552490234375
+RAM BEFORE PRE-TRAINING 2.2647552490234375
+RAM AFTER PRE-TRAINING 2.2647552490234375
+RAM BEFORE GENERATOR: 2.2647552490234375
+RAM AFTER DECLARING GENERATOR: 2.2647552490234375
+MACs of top classifier: 525312
+RAM BEFORE REPORTING: 2.2706871032714844
+
+Parameter-stamp...
+ --> task:          splitAffectNet4-task
+ --> model:         VGG_CLASSIFIER_c8
+ --> hyper-params:  i2000-lr0.0001-b32-adam
+ --> replay:        naive-rehearsal
+splitAffectNet4-task--VGG_CLASSIFIER_c8--i2000-lr0.0001-b32-adam--naive-rehearsal-s1856
+
+----------------------------------------TOP----------------------------------------
+CNNTopClassifier(
+  (dropout2): Dropout(p=0.5, inplace=False)
+  (fc1): Linear(in_features=4096, out_features=128, bias=True)
+  (fc2): Linear(in_features=128, out_features=8, bias=True)
+)
+------------------------------------------------------------------------------------------
+--> this network has 525448 parameters (~0.5 million)
+      of which: - learnable: 525448 (~0.5 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+ROOT = VGG-16
+RAM BEFORE TRAINING: 2.2706871032714844
+CPU BEFORE TRAINING: (6.18, 3.62)
+INITIALISING GPU TRACKER
+
+Training...
+PEAK TRAINING RAM: 2.3161163330078125
+Peak mem and init mem: 2925 2713
+GPU BEFORE EVALUATION: (14.42142857142857, 212)
+RAM BEFORE EVALUATION: 2.3159523010253906
+CPU BEFORE EVALUATION: (1439.04, 70.91)
+
+
+EVALUATION RESULTS:
+
+ Precision on test-set:
+ - Task 1: 0.6510
+ - Task 2: 0.6760
+ - Task 3: 0.7100
+ - Task 4: 0.6450
+=> Average precision over all 4 tasks: 0.6705
+
+=> Total training time = 1397.4 seconds
+
+RAM AT THE END: 2.3305282592773438
+CPU AT THE END: (1461.15, 71.92)
