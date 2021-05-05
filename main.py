@@ -38,6 +38,7 @@ import gc
 import torchvision.models as models
 from vgg_classifier import VGGClassifier
 from vgg_face.vgg_face import VGG_FACE_16
+import pickle
 
 parser = argparse.ArgumentParser('./main.py', description='Run individual continual learning experiment.')
 parser.add_argument('--get-stamp', action='store_true', help='print param-stamp & exit')
@@ -146,6 +147,7 @@ latent_params.add_argument('--buffer-size', type=int, default=1000)
 latent_params.add_argument('--early-stop', action='store_true')
 latent_params.add_argument('--validation', action='store_true')
 latent_params.add_argument('--use-vgg-face', action='store_true')
+latent_params.add_argument('--identifier', type=str, default="na")
 
 ramu = RAMU()
 cpuu = CPUUsage()
@@ -635,7 +637,7 @@ def run(args, verbose=False):
     start = time.time()
     # Train model
     if args.latent_replay == "on": 
-        train_cl_latent(
+        res = train_cl_latent(
             top_model, train_datasets, root=root_model, replay_mode=args.replay, scenario=scenario, classes_per_task=classes_per_task,
             iters=args.iters, batch_size=args.batch,
             generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
@@ -645,7 +647,7 @@ def run(args, verbose=False):
             early_stop=args.early_stop, validation=args.validation
         )
     else: 
-        train_cl(
+        res = train_cl(
             model, train_datasets, replay_mode=args.replay, scenario=scenario, classes_per_task=classes_per_task,
             iters=args.iters, batch_size=args.batch,
             generator=generator, gen_iters=args.g_iters, gen_loss_cbs=generator_loss_cbs,
@@ -654,6 +656,11 @@ def run(args, verbose=False):
             buffer_size=args.buffer_size, valid_datasets=test_datasets if (args.early_stop or args.validation) else None, 
             early_stop=args.early_stop, validation=args.validation
         )
+    if res is not None and args.validation: 
+        # Store the validation data if required
+        with open('validation/val_{}_{}_{}.pkl'.format(dataset, args.seed, args.identifier), 'wb') as output: 
+            pickle.dump(res, output, pickle.HIGHEST_PROTOCOL)
+            
     if cuda:
         print("GPU BEFORE EVALUATION:", gpuu.compute("BEFORE EVALUATION"))
 
