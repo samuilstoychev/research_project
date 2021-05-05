@@ -12,7 +12,7 @@ parser.add_argument('--early-stopping', action='store_true')
 parser.add_argument('--scenario', type=str, default='task', choices=['task', 'class'])
 
 def get_command(architecture, replay_method, scenario, gpu, early_stopping, seed): 
-        cmd = ["../../../../main.py", "--time"]
+        cmd = ["../../main.py", "--time"]
         if scenario=="task": 
             cmd.append("--scenario=task")
             cmd.append("--iters=500")
