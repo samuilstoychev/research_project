@@ -49,7 +49,7 @@ def get_command(architecture, replay_method, scenario, gpu, early_stopping, seed
             cmd.append("--replay=naive-rehearsal")
             cmd.append("--latent-replay=on")
         elif replay_method == "none": 
-            pass
+            cmd.append("--pretrain-baseline")
 
         if not gpu: 
             cmd.append("--no-gpus")

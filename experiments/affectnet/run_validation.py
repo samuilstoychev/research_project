@@ -14,7 +14,7 @@ def get_command(replay_method, seed):
             "../../main.py", 
             "--time", 
             "--scenario=task",
-            "--experiment=splitCKPLUS",
+            "--experiment=splitAffectNet",
             "--tasks=4", 
             "--network=cnn", 
             "--iters=2000", 
@@ -59,8 +59,8 @@ def get_command(replay_method, seed):
 
 def run_experiments():
     commands_to_run = []
-    # Using the seeds generated during the experiments from 2021-05-01-15-30
-    random_seeds = [2990, 6788, 9524]
+    # Using the seeds from 2021-05-04-14-11
+    random_seeds = [1842, 1856, 2306]
 
     for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd", "none"]: 
         for seed in random_seeds: 
@@ -76,7 +76,7 @@ def run_experiments():
         done += 1
         print("Executed %d/%d commands" % (done, n))
 
-def run_command(cmd):
+def run_command(cmd, outfile=None):
     p = subprocess.Popen(cmd)
     ret_code = p.wait()
     return ret_code
