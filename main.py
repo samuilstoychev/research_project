@@ -658,7 +658,7 @@ def run(args, verbose=False):
         )
     if res is not None and args.validation: 
         # Store the validation data if required
-        with open('validation/val_{}_{}_{}.pkl'.format(dataset, args.seed, args.identifier), 'wb') as output: 
+        with open('validation_{}/val_{}_{}_{}.pkl'.format(args.scenario, dataset, args.seed, args.identifier), 'wb') as output: 
             pickle.dump(res, output, pickle.HIGHEST_PROTOCOL)
             
     if cuda:
