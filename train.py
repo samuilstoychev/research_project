@@ -246,27 +246,15 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                 peak_ramu = max(peak_ramu, ramu.compute("TRAINING"))
 
             # Validation for early stopping 
-            if valid_datasets and (batch_index == 1 or batch_index % 100 == 0): 
-                if early_stop: 
-                    prec = evaluate.validate(
-                        model, valid_datasets[task-1], verbose=False, test_size=None, task=task, 
-                        allowed_classes=list(range(classes_per_task*(task-1), classes_per_task*(task))) if scenario=="task" else None
-                    ) 
-                    if prec < prev_prec: 
-                        prev_prec = 0.0
-                        break 
-                    prev_prec = prec 
-                elif validation: 
-                    v_precs = [evaluate.validate(
-                        model, valid_datasets[i-1], verbose=False, test_size=None, task=i, 
-                        allowed_classes=list(range(classes_per_task*(i-1), classes_per_task*(i))) if scenario=="task" else None
-                    ) for i in range(1, task+1)]
-                    t_precs = [evaluate.validate(
-                        model, train_datasets[i-1], verbose=False, test_size=None, task=i, 
-                        allowed_classes=list(range(classes_per_task*(i-1), classes_per_task*(i))) if scenario=="task" else None
-                    ) for i in range(1, task+1)]
-                    valid_precs.append((task, batch_index, v_precs))
-                    train_precs.append((task, batch_index, t_precs))
+            if early_stop and valid_datasets and (batch_index % 100 == 0): 
+                prec = evaluate.validate(
+                    model, valid_datasets[task-1], verbose=False, test_size=None, task=task, 
+                    allowed_classes=list(range(classes_per_task*(task-1), classes_per_task*(task))) if scenario=="task" else list(range(task))
+                ) 
+                if prec < prev_prec: 
+                    prev_prec = 0.0
+                    break 
+                prev_prec = prec 
 
             #---> Train MAIN MODEL
             if batch_index <= iters:
@@ -326,6 +314,17 @@ def train_cl(model, train_datasets, replay_mode="none", scenario="class",classes
                     if sample_cb is not None:
                         sample_cb(generator, batch_index, task=task)
 
+        if validation and valid_datasets: 
+            v_precs = [evaluate.validate(
+                model, valid_datasets[i-1], verbose=False, test_size=None, task=i, 
+                allowed_classes=list(range(classes_per_task*(i-1), classes_per_task*(i))) if scenario=="task" else list(range(task))
+            ) for i in range(1, task+1)]
+            t_precs = [evaluate.validate(
+                model, train_datasets[i-1], verbose=False, test_size=None, task=i, 
+                allowed_classes=list(range(classes_per_task*(i-1), classes_per_task*(i))) if scenario=="task" else list(range(task))
+            ) for i in range(1, task+1)]
+            valid_precs.append((task, batch_index, v_precs))
+            train_precs.append((task, batch_index, t_precs))
 
         ##----------> UPON FINISHING EACH TASK...
         if replay_mode == "naive-rehearsal": 
