@@ -36,9 +36,9 @@ def run_experiments():
     os.chdir(timestamp)
 
     commands_to_run = []
-    for n_iterations in ["1000", "2000", "3000"]: 
-        for g_fc_uni in ["200", "400", "800", "1600", "3200"]: 
-            for i in range(3): 
+    for n_iterations in ["2000", "3000"]: 
+        for g_fc_uni in ["200", "400", "800", "1600"]: 
+            for i in range(1): 
                 filename = n_iterations + "_" + g_fc_uni + "_" + str(i)
                 cmd = get_command(n_iterations, g_fc_uni)
                 commands_to_run.append((cmd, filename))
