@@ -6,21 +6,21 @@ import random
 import numpy as np
 import os 
 
-def get_command(n_iterations, g_fc_uni): 
+def get_command(n_iterations, buffer_size): 
     cmd = [
         "../../../main.py",
-        "--replay=generative", 
+        "--replay=naive-rehearsal", 
         "--latent-replay=on",
         "--time",
-        "--experiment=splitCKPLUS",
         "--scenario=class",
+        "--experiment=splitCKPLUS",
         "--tasks=8", 
         "--network=cnn", 
         "--iters=" + n_iterations, 
         "--lr=0.0001", 
         "--batch=32", 
         "--latent-size=4096", 
-        "--g-fc-uni=" + g_fc_uni, 
+        "--buffer-size=" + buffer_size, 
         "--vgg-root"
     ]
     random_seed = random.randint(0, 10000)
@@ -36,10 +36,10 @@ def run_experiments():
 
     commands_to_run = []
     for n_iterations in ["2000", "3000"]: 
-        for g_fc_uni in ["200", "400", "800", "1600"]: 
+        for buffer_size in ["200", "500", "1000", "1500"]: 
             for i in range(1): 
-                filename = n_iterations + "_" + g_fc_uni + "_" + str(i)
-                cmd = get_command(n_iterations, g_fc_uni)
+                filename = n_iterations + "_" + buffer_size + "_" + str(i)
+                cmd = get_command(n_iterations, buffer_size)
                 commands_to_run.append((cmd, filename))
     commands_to_run = np.random.permutation(commands_to_run) 
 
