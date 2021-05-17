@@ -1,0 +1,149 @@
+../../../../main.py --time --scenario=task --iters=500 --network=cnn --latent-size=128 --replay=generative --pretrain-baseline --seed=6861
+RAM AT BEGINNING: 0.22130966186523438
+Latent replay turned off
+CUDA is used
+RAM BEFORE LOADING DATA: 0.22645950317382812
+
+Preparing the data...
+SPLIT RATIO: [50000, 10000]
+Generated permutations: [3 0 1 6 7 5 9 4 2 8]
+Downloading http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+Failed to download (trying next):
+HTTP Error 503: Service Unavailable
+
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz to ./datasets/mnist/MNIST/raw/train-images-idx3-ubyte.gz
+Extracting ./datasets/mnist/MNIST/raw/train-images-idx3-ubyte.gz to ./datasets/mnist/MNIST/raw
+
+Downloading http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+Failed to download (trying next):
+HTTP Error 503: Service Unavailable
+
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz to ./datasets/mnist/MNIST/raw/train-labels-idx1-ubyte.gz
+Extracting ./datasets/mnist/MNIST/raw/train-labels-idx1-ubyte.gz to ./datasets/mnist/MNIST/raw
+
+Downloading http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+Failed to download (trying next):
+HTTP Error 503: Service Unavailable
+
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz to ./datasets/mnist/MNIST/raw/t10k-images-idx3-ubyte.gz
+Extracting ./datasets/mnist/MNIST/raw/t10k-images-idx3-ubyte.gz to ./datasets/mnist/MNIST/raw
+
+Downloading http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+Failed to download (trying next):
+HTTP Error 503: Service Unavailable
+
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz to ./datasets/mnist/MNIST/raw/t10k-labels-idx1-ubyte.gz
+Extracting ./datasets/mnist/MNIST/raw/t10k-labels-idx1-ubyte.gz to ./datasets/mnist/MNIST/raw
+
+Processing...
+Done!
+ --> mnist: 'train'-dataset consisting of 60000 samples
+ --> mnist: 'test'-dataset consisting of 10000 samples
+RAM AFTER LOADING DATA: 0.29412078857421875
+RAM BEFORE CLASSIFER: 0.29412078857421875
+RAM AFTER CLASSIFER: 2.2315216064453125
+RAM BEFORE PRE-TRAINING 2.2315216064453125
+RAM AFTER PRE-TRAINING 2.2471351623535156
+RAM BEFORE GENERATOR: 2.2471351623535156
+RAM AFTER DECLARING GENERATOR: 2.2514114379882812
+MACs of model: 279824
+RAM BEFORE REPORTING: 2.2514114379882812
+
+Parameter-stamp...
+ --> task:          splitMNIST5-task
+ --> model:         CNN_CLASSIFIER_c10
+ --> hyper-params:  i500-lr0.001-b128-adam
+ --> replay:        generative-VAE(MLP([1024, 400, 400])--z100-c10)
+splitMNIST5-task--CNN_CLASSIFIER_c10--i500-lr0.001-b128-adam--generative-VAE(MLP([1024, 400, 400])--z100-c10)-s6861
+
+----------------------------------------MAIN MODEL----------------------------------------
+CNNClassifier(
+  (conv1): Conv2d(1, 5, kernel_size=(5, 5), stride=(1, 1))
+  (conv2): Conv2d(5, 5, kernel_size=(5, 5), stride=(1, 1))
+  (dropout1): Dropout(p=0.25, inplace=False)
+  (dropout2): Dropout(p=0.5, inplace=False)
+  (fc0): Linear(in_features=720, out_features=128, bias=True)
+  (fc1): Linear(in_features=128, out_features=128, bias=True)
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
+)
+------------------------------------------------------------------------------------------
+--> this network has 110850 parameters (~0.1 million)
+      of which: - learnable: 17802 (~0.0 million)
+                - fixed: 93048 (~0.1 million)
+------------------------------------------------------------------------------------------
+
+----------------------------------------GENERATOR----------------------------------------
+AutoEncoder(
+  (flatten): Flatten()
+  (fcE): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=1024, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=400)
+      (nl): ReLU()
+    )
+  )
+  (toZ): fc_layer_split(
+    (mean): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=100)
+    )
+    (logvar): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=100)
+    )
+  )
+  (classifier): fc_layer(
+    (linear): LinearExcitability(in_features=400, out_features=10)
+  )
+  (fromZ): fc_layer(
+    (linear): LinearExcitability(in_features=100, out_features=400)
+    (nl): ReLU()
+  )
+  (fcD): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=1024)
+      (nl): Sigmoid()
+    )
+  )
+  (to_image): Reshape(channels = 1)
+)
+------------------------------------------------------------------------------------------
+--> this network has 1265934 parameters (~1.3 million)
+      of which: - learnable: 1265934 (~1.3 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+RAM BEFORE TRAINING: 2.2514114379882812
+CPU BEFORE TRAINING: (33.07, 4.75)
+INITIALISING GPU TRACKER
+
+Training...
+PEAK TRAINING RAM: 2.253833770751953
+Peak mem and init mem: 991 951
+GPU BEFORE EVALUATION: (14.375, 40)
+RAM BEFORE EVALUATION: 2.253833770751953
+CPU BEFORE EVALUATION: (136.71, 6.9)
+
+
+EVALUATION RESULTS:
+
+ Precision on test-set:
+ - Task 1: 0.9945
+ - Task 2: 0.9954
+ - Task 3: 0.9974
+ - Task 4: 0.9980
+ - Task 5: 0.9969
+=> Average precision over all 5 tasks: 0.9964
+
+=> Total training time = 73.1 seconds
+
+RAM AT THE END: 2.253856658935547
+CPU AT THE END: (138.5, 6.93)

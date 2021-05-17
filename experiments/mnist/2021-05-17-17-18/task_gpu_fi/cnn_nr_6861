@@ -1,0 +1,69 @@
+../../../../main.py --time --scenario=task --iters=500 --network=cnn --latent-size=128 --replay=naive-rehearsal --pretrain-baseline --seed=6861
+RAM AT BEGINNING: 0.22309494018554688
+Latent replay turned off
+CUDA is used
+RAM BEFORE LOADING DATA: 0.22763824462890625
+
+Preparing the data...
+SPLIT RATIO: [50000, 10000]
+Generated permutations: [3 0 1 6 7 5 9 4 2 8]
+ --> mnist: 'train'-dataset consisting of 60000 samples
+ --> mnist: 'test'-dataset consisting of 10000 samples
+RAM AFTER LOADING DATA: 0.2887763977050781
+RAM BEFORE CLASSIFER: 0.2887763977050781
+RAM AFTER CLASSIFER: 2.2437896728515625
+RAM BEFORE PRE-TRAINING 2.2437896728515625
+RAM AFTER PRE-TRAINING 2.25732421875
+RAM BEFORE GENERATOR: 2.25732421875
+RAM AFTER DECLARING GENERATOR: 2.25732421875
+MACs of model: 279824
+RAM BEFORE REPORTING: 2.25732421875
+
+Parameter-stamp...
+ --> task:          splitMNIST5-task
+ --> model:         CNN_CLASSIFIER_c10
+ --> hyper-params:  i500-lr0.001-b128-adam
+ --> replay:        naive-rehearsal
+splitMNIST5-task--CNN_CLASSIFIER_c10--i500-lr0.001-b128-adam--naive-rehearsal-s6861
+
+----------------------------------------MAIN MODEL----------------------------------------
+CNNClassifier(
+  (conv1): Conv2d(1, 5, kernel_size=(5, 5), stride=(1, 1))
+  (conv2): Conv2d(5, 5, kernel_size=(5, 5), stride=(1, 1))
+  (dropout1): Dropout(p=0.25, inplace=False)
+  (dropout2): Dropout(p=0.5, inplace=False)
+  (fc0): Linear(in_features=720, out_features=128, bias=True)
+  (fc1): Linear(in_features=128, out_features=128, bias=True)
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
+)
+------------------------------------------------------------------------------------------
+--> this network has 110850 parameters (~0.1 million)
+      of which: - learnable: 17802 (~0.0 million)
+                - fixed: 93048 (~0.1 million)
+------------------------------------------------------------------------------------------
+RAM BEFORE TRAINING: 2.25732421875
+CPU BEFORE TRAINING: (34.88, 4.72)
+INITIALISING GPU TRACKER
+
+Training...
+PEAK TRAINING RAM: 2.2609214782714844
+Peak mem and init mem: 1043 951
+GPU BEFORE EVALUATION: (8.333333333333334, 92)
+RAM BEFORE EVALUATION: 2.2609214782714844
+CPU BEFORE EVALUATION: (118.28, 6.96)
+
+
+EVALUATION RESULTS:
+
+ Precision on test-set:
+ - Task 1: 0.9829
+ - Task 2: 0.9933
+ - Task 3: 0.9948
+ - Task 4: 0.9910
+ - Task 5: 0.9980
+=> Average precision over all 5 tasks: 0.9920
+
+=> Total training time = 56.0 seconds
+
+RAM AT THE END: 2.2610435485839844
+CPU AT THE END: (120.13, 7.01)
