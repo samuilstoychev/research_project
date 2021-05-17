@@ -10,11 +10,12 @@ parser = argparse.ArgumentParser('./run_experiments.py', description='Run experi
 parser.add_argument('--gpu', action='store_true')
 parser.add_argument('--early-stopping', action='store_true')
 parser.add_argument('--scenario', type=str, default='task', choices=['task', 'class'])
+parser.add_argument('--model', type=str, default='cnn', choices=['mlp', 'cnn'])
 
 def form_folder_name(scenario, gpu, early_stopping): 
     return scenario + ("_gpu" if gpu else "_nogpu") + ("_es" if early_stopping else "_fi")
 
-def get_command(architecture, replay_method, scenario, gpu, early_stopping): 
+def get_command(architecture, replay_method, scenario, gpu, early_stopping, seed): 
         cmd = ["../../../../main.py", "--time"]
         if scenario=="task": 
             cmd.append("--scenario=task")
@@ -56,13 +57,11 @@ def get_command(architecture, replay_method, scenario, gpu, early_stopping):
             cmd.append("--no-gpus")
         if early_stopping: 
             cmd.append("--early-stop")
-
-        random_seed = random.randint(0, 10000)
-        cmd.append("--seed=" + str(random_seed))
+        cmd.append("--seed=" + str(seed))
         return cmd
         
 
-def run_experiments(scenario, gpu, early_stopping):
+def run_experiments(scenario, gpu, early_stopping, architecture):
     timestamp = time.strftime("%Y-%m-%d-%H-%M")
     print("Timestamp is", timestamp)
     run_command(["mkdir", timestamp])
@@ -70,12 +69,17 @@ def run_experiments(scenario, gpu, early_stopping):
     os.chdir(timestamp + "/" + form_folder_name(scenario, gpu, early_stopping))
 
     commands_to_run = []
-    for architecture in ["mlp", "cnn"]: 
-        for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd"]: 
-            for i in range(3): 
-                filename = architecture + "_" + replay_method + "_" + str(i)
-                cmd = get_command(architecture, replay_method, scenario, gpu, early_stopping)
-                commands_to_run.append((cmd, filename))
+    random_seeds = [random.randint(0, 10000) for _ in range(3)]
+    if architecture == "cnn": 
+        random_seeds[0] = 8408 if scenario == "task" else 9978
+    
+    print("Random seeds are", random_seeds)
+
+    for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd"]: 
+        for seed in random_seeds: 
+            filename = architecture + "_" + replay_method + "_" + str(seed)
+            cmd = get_command(architecture, replay_method, scenario, gpu, early_stopping, seed)
+            commands_to_run.append((cmd, filename))
     commands_to_run = np.random.permutation(commands_to_run) 
 
     n = len(commands_to_run)
@@ -99,4 +103,4 @@ def run_command(cmd, outfile=None):
 
 if __name__ == "__main__": 
     args = parser.parse_args()
-    run_experiments(args.scenario, args.gpu, args.early_stopping) 
+    run_experiments(args.scenario, args.gpu, args.early_stopping, args.model) 
