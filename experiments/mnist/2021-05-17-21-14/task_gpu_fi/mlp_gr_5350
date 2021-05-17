@@ -1,0 +1,122 @@
+../../../../main.py --time --scenario=task --iters=500 --network=mlp --latent-size=128 --replay=generative --pretrain-baseline --seed=5350
+RAM AT BEGINNING: 0.22422027587890625
+Latent replay turned off
+CUDA is used
+RAM BEFORE LOADING DATA: 0.22881698608398438
+
+Preparing the data...
+SPLIT RATIO: [50000, 10000]
+Generated permutations: [2 8 4 1 3 0 5 9 7 6]
+ --> mnist: 'train'-dataset consisting of 60000 samples
+ --> mnist: 'test'-dataset consisting of 10000 samples
+RAM AFTER LOADING DATA: 0.2898292541503906
+RAM BEFORE CLASSIFER: 0.2898292541503906
+RAM AFTER CLASSIFER: 2.23980712890625
+RAM BEFORE PRE-TRAINING 2.23980712890625
+RAM AFTER PRE-TRAINING 2.255413055419922
+RAM BEFORE GENERATOR: 2.255413055419922
+RAM AFTER DECLARING GENERATOR: 2.2581787109375
+MACs of model: 0
+RAM BEFORE REPORTING: 2.2581787109375
+
+Parameter-stamp...
+ --> task:          splitMNIST5-task
+ --> model:         MLP([1024, 400, 400])_c10
+ --> hyper-params:  i500-lr0.001-b128-adam
+ --> replay:        generative-VAE(MLP([1024, 400, 400])--z100-c10)
+splitMNIST5-task--MLP([1024, 400, 400])_c10--i500-lr0.001-b128-adam--generative-VAE(MLP([1024, 400, 400])--z100-c10)-s5350
+
+----------------------------------------MAIN MODEL----------------------------------------
+Classifier(
+  (flatten): Flatten()
+  (fcE): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=1024, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=128)
+      (nl): Sigmoid()
+    )
+  )
+  (classifier): fc_layer(
+    (linear): LinearExcitability(in_features=128, out_features=10)
+  )
+)
+------------------------------------------------------------------------------------------
+--> this network has 462618 parameters (~0.5 million)
+      of which: - learnable: 1290 (~0.0 million)
+                - fixed: 461328 (~0.5 million)
+------------------------------------------------------------------------------------------
+
+----------------------------------------GENERATOR----------------------------------------
+AutoEncoder(
+  (flatten): Flatten()
+  (fcE): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=1024, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=400)
+      (nl): ReLU()
+    )
+  )
+  (toZ): fc_layer_split(
+    (mean): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=100)
+    )
+    (logvar): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=100)
+    )
+  )
+  (classifier): fc_layer(
+    (linear): LinearExcitability(in_features=400, out_features=10)
+  )
+  (fromZ): fc_layer(
+    (linear): LinearExcitability(in_features=100, out_features=400)
+    (nl): ReLU()
+  )
+  (fcD): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=1024)
+      (nl): Sigmoid()
+    )
+  )
+  (to_image): Reshape(channels = 1)
+)
+------------------------------------------------------------------------------------------
+--> this network has 1265934 parameters (~1.3 million)
+      of which: - learnable: 1265934 (~1.3 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+RAM BEFORE TRAINING: 2.2581787109375
+CPU BEFORE TRAINING: (31.66, 3.92)
+INITIALISING GPU TRACKER
+
+Training...
+PEAK TRAINING RAM: 2.2604217529296875
+Peak mem and init mem: 991 931
+GPU BEFORE EVALUATION: (11.666666666666666, 60)
+RAM BEFORE EVALUATION: 2.2604598999023438
+CPU BEFORE EVALUATION: (140.51, 5.82)
+
+
+EVALUATION RESULTS:
+
+ Precision on test-set:
+ - Task 1: 0.9700
+ - Task 2: 0.9969
+ - Task 3: 0.9894
+ - Task 4: 0.9823
+ - Task 5: 0.9912
+=> Average precision over all 5 tasks: 0.9860
+
+=> Total training time = 80.5 seconds
+
+RAM AT THE END: 2.2604598999023438
+CPU AT THE END: (142.32, 5.85)
