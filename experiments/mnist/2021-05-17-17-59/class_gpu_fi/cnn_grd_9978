@@ -1,0 +1,120 @@
+../../../../main.py --time --scenario=class --tasks=10 --iters=1000 --network=cnn --latent-size=128 --replay=generative --pretrain-baseline --distill --seed=9978
+RAM AT BEGINNING: 0.2232818603515625
+Latent replay turned off
+CUDA is used
+RAM BEFORE LOADING DATA: 0.22787857055664062
+
+Preparing the data...
+SPLIT RATIO: [50000, 10000]
+Generated permutations: [6 8 4 7 2 3 1 0 9 5]
+ --> mnist: 'train'-dataset consisting of 60000 samples
+ --> mnist: 'test'-dataset consisting of 10000 samples
+RAM AFTER LOADING DATA: 0.2890510559082031
+RAM BEFORE CLASSIFER: 0.2890510559082031
+RAM AFTER CLASSIFER: 2.2379493713378906
+RAM BEFORE PRE-TRAINING 2.2379493713378906
+RAM AFTER PRE-TRAINING 2.254314422607422
+RAM BEFORE GENERATOR: 2.254314422607422
+RAM AFTER DECLARING GENERATOR: 2.2585906982421875
+MACs of model: 279824
+RAM BEFORE REPORTING: 2.2585906982421875
+
+Parameter-stamp...
+ --> task:          splitMNIST10-class
+ --> model:         CNN_CLASSIFIER_c10
+ --> hyper-params:  i1000-lr0.001-b128-adam
+ --> replay:        generative-KD2.0-VAE(MLP([1024, 400, 400])--z100-c10)
+splitMNIST10-class--CNN_CLASSIFIER_c10--i1000-lr0.001-b128-adam--generative-KD2.0-VAE(MLP([1024, 400, 400])--z100-c10)-s9978
+
+----------------------------------------MAIN MODEL----------------------------------------
+CNNClassifier(
+  (conv1): Conv2d(1, 5, kernel_size=(5, 5), stride=(1, 1))
+  (conv2): Conv2d(5, 5, kernel_size=(5, 5), stride=(1, 1))
+  (dropout1): Dropout(p=0.25, inplace=False)
+  (dropout2): Dropout(p=0.5, inplace=False)
+  (fc0): Linear(in_features=720, out_features=128, bias=True)
+  (fc1): Linear(in_features=128, out_features=128, bias=True)
+  (fc2): Linear(in_features=128, out_features=10, bias=True)
+)
+------------------------------------------------------------------------------------------
+--> this network has 110850 parameters (~0.1 million)
+      of which: - learnable: 17802 (~0.0 million)
+                - fixed: 93048 (~0.1 million)
+------------------------------------------------------------------------------------------
+
+----------------------------------------GENERATOR----------------------------------------
+AutoEncoder(
+  (flatten): Flatten()
+  (fcE): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=1024, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=400)
+      (nl): ReLU()
+    )
+  )
+  (toZ): fc_layer_split(
+    (mean): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=100)
+    )
+    (logvar): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=100)
+    )
+  )
+  (classifier): fc_layer(
+    (linear): LinearExcitability(in_features=400, out_features=10)
+  )
+  (fromZ): fc_layer(
+    (linear): LinearExcitability(in_features=100, out_features=400)
+    (nl): ReLU()
+  )
+  (fcD): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=1024)
+      (nl): Sigmoid()
+    )
+  )
+  (to_image): Reshape(channels = 1)
+)
+------------------------------------------------------------------------------------------
+--> this network has 1265934 parameters (~1.3 million)
+      of which: - learnable: 1265934 (~1.3 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+RAM BEFORE TRAINING: 2.2585906982421875
+CPU BEFORE TRAINING: (55.9, 4.53)
+INITIALISING GPU TRACKER
+
+Training...
+PEAK TRAINING RAM: 2.2607803344726562
+Peak mem and init mem: 991 951
+GPU BEFORE EVALUATION: (15.689655172413794, 40)
+RAM BEFORE EVALUATION: 2.2607803344726562
+CPU BEFORE EVALUATION: (450.25, 11.93)
+
+
+EVALUATION RESULTS:
+
+ Precision on test-set:
+ - Task 1: 0.9056
+ - Task 2: 0.9770
+ - Task 3: 0.9684
+ - Task 4: 0.9765
+ - Task 5: 0.9496
+ - Task 6: 0.8890
+ - Task 7: 0.9531
+ - Task 8: 0.9594
+ - Task 9: 0.9718
+ - Task 10: 0.8963
+=> Average precision over all 10 tasks: 0.9447
+
+=> Total training time = 286.9 seconds
+
+RAM AT THE END: 2.2608909606933594
+CPU AT THE END: (452.2, 11.95)
