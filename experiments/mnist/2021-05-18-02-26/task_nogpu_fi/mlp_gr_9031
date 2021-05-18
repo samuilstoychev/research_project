@@ -1,0 +1,119 @@
+../../../../main.py --time --scenario=task --iters=500 --network=mlp --latent-size=128 --replay=generative --pretrain-baseline --no-gpus --seed=9031
+RAM AT BEGINNING: 0.22391510009765625
+Latent replay turned off
+CUDA is NOT(!!) used
+RAM BEFORE LOADING DATA: 0.22850418090820312
+
+Preparing the data...
+SPLIT RATIO: [50000, 10000]
+Generated permutations: [0 4 3 1 8 6 7 9 5 2]
+ --> mnist: 'train'-dataset consisting of 60000 samples
+ --> mnist: 'test'-dataset consisting of 10000 samples
+RAM AFTER LOADING DATA: 0.28940582275390625
+RAM BEFORE CLASSIFER: 0.28940582275390625
+RAM AFTER CLASSIFER: 0.29163360595703125
+RAM BEFORE PRE-TRAINING 0.29163360595703125
+RAM AFTER PRE-TRAINING 0.3048858642578125
+RAM BEFORE GENERATOR: 0.3048858642578125
+RAM AFTER DECLARING GENERATOR: 0.3091583251953125
+MACs of model: 0
+RAM BEFORE REPORTING: 0.3091583251953125
+
+Parameter-stamp...
+ --> task:          splitMNIST5-task
+ --> model:         MLP([1024, 400, 400])_c10
+ --> hyper-params:  i500-lr0.001-b128-adam
+ --> replay:        generative-VAE(MLP([1024, 400, 400])--z100-c10)
+splitMNIST5-task--MLP([1024, 400, 400])_c10--i500-lr0.001-b128-adam--generative-VAE(MLP([1024, 400, 400])--z100-c10)-s9031
+
+----------------------------------------MAIN MODEL----------------------------------------
+Classifier(
+  (flatten): Flatten()
+  (fcE): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=1024, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=128)
+      (nl): Sigmoid()
+    )
+  )
+  (classifier): fc_layer(
+    (linear): LinearExcitability(in_features=128, out_features=10)
+  )
+)
+------------------------------------------------------------------------------------------
+--> this network has 462618 parameters (~0.5 million)
+      of which: - learnable: 1290 (~0.0 million)
+                - fixed: 461328 (~0.5 million)
+------------------------------------------------------------------------------------------
+
+----------------------------------------GENERATOR----------------------------------------
+AutoEncoder(
+  (flatten): Flatten()
+  (fcE): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=1024, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=400)
+      (nl): ReLU()
+    )
+  )
+  (toZ): fc_layer_split(
+    (mean): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=100)
+    )
+    (logvar): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=100)
+    )
+  )
+  (classifier): fc_layer(
+    (linear): LinearExcitability(in_features=400, out_features=10)
+  )
+  (fromZ): fc_layer(
+    (linear): LinearExcitability(in_features=100, out_features=400)
+    (nl): ReLU()
+  )
+  (fcD): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=1024)
+      (nl): Sigmoid()
+    )
+  )
+  (to_image): Reshape(channels = 1)
+)
+------------------------------------------------------------------------------------------
+--> this network has 1265934 parameters (~1.3 million)
+      of which: - learnable: 1265934 (~1.3 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+RAM BEFORE TRAINING: 0.3091583251953125
+CPU BEFORE TRAINING: (66.49, 16.33)
+
+Training...
+PEAK TRAINING RAM: 0.38306427001953125
+RAM BEFORE EVALUATION: 0.3770103454589844
+CPU BEFORE EVALUATION: (2136.89, 75.55)
+
+
+EVALUATION RESULTS:
+
+ Precision on test-set:
+ - Task 1: 0.9965
+ - Task 2: 0.9912
+ - Task 3: 0.9919
+ - Task 4: 0.9854
+ - Task 5: 0.9945
+=> Average precision over all 5 tasks: 0.9919
+
+=> Total training time = 367.1 seconds
+
+RAM AT THE END: 0.3770103454589844
+CPU AT THE END: (2139.22, 75.56)

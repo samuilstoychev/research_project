@@ -1,0 +1,88 @@
+../../../../main.py --time --scenario=class --tasks=10 --iters=500 --network=mlp --latent-size=128 --replay=naive-rehearsal --latent-replay=on --no-gpus --seed=5600
+RAM AT BEGINNING: 0.22377395629882812
+Latent replay turned on
+CUDA is NOT(!!) used
+RAM BEFORE LOADING DATA: 0.2283172607421875
+
+Preparing the data...
+SPLIT RATIO: [50000, 10000]
+Generated permutations: [7 0 3 8 4 5 6 2 1 9]
+ --> mnist: 'train'-dataset consisting of 60000 samples
+ --> mnist: 'test'-dataset consisting of 10000 samples
+RAM AFTER LOADING DATA: 0.2896308898925781
+RAM BEFORE CLASSIFER: 0.2916107177734375
+RAM AFTER CLASSIFER: 0.2935333251953125
+RAM BEFORE PRE-TRAINING 0.2935333251953125
+RAM AFTER PRE-TRAINING 0.3068885803222656
+RAM BEFORE GENERATOR: 0.3068885803222656
+RAM AFTER DECLARING GENERATOR: 0.3068885803222656
+MACs of root classifier 0
+MACs of top classifier: 0
+RAM BEFORE REPORTING: 0.3068885803222656
+
+Parameter-stamp...
+ --> task:          splitMNIST10-class
+ --> model:         MLP([1024, 400, 400])_c10
+ --> hyper-params:  i500-lr0.001-b128-adam
+ --> replay:        naive-rehearsal
+splitMNIST10-class--MLP([1024, 400, 400])_c10--i500-lr0.001-b128-adam--naive-rehearsal-s5600
+
+----------------------------------------TOP----------------------------------------
+TopClassifier(
+  (classifier): fc_layer(
+    (linear): LinearExcitability(in_features=128, out_features=10)
+  )
+)
+------------------------------------------------------------------------------------------
+--> this network has 1290 parameters (~0.0 million)
+      of which: - learnable: 1290 (~0.0 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+
+----------------------------------------ROOT----------------------------------------
+RootClassifier(
+  (flatten): Flatten()
+  (fcE): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=1024, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=128)
+      (nl): Sigmoid()
+    )
+  )
+)
+------------------------------------------------------------------------------------------
+--> this network has 461328 parameters (~0.5 million)
+      of which: - learnable: 461328 (~0.5 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+RAM BEFORE TRAINING: 0.3068885803222656
+CPU BEFORE TRAINING: (86.43, 15.76)
+
+Training...
+PEAK TRAINING RAM: 0.3334922790527344
+RAM BEFORE EVALUATION: 0.3305091857910156
+CPU BEFORE EVALUATION: (306.27, 17.85)
+
+
+EVALUATION RESULTS:
+
+ Precision on test-set:
+ - Task 1: 0.9727
+ - Task 2: 0.9497
+ - Task 3: 0.9455
+ - Task 4: 0.9516
+ - Task 5: 0.9644
+ - Task 6: 0.9260
+ - Task 7: 0.9582
+ - Task 8: 0.9776
+ - Task 9: 0.9277
+ - Task 10: 0.9237
+=> Average precision over all 10 tasks: 0.9497
+
+=> Total training time = 81.6 seconds
+
+RAM AT THE END: 0.3305091857910156
+CPU AT THE END: (308.6, 17.88)
