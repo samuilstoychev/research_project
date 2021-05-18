@@ -1,0 +1,125 @@
+../../../../main.py --time --scenario=class --tasks=10 --iters=500 --network=mlp --latent-size=128 --replay=naive-rehearsal --latent-replay=on --seed=6059
+RAM AT BEGINNING: 0.22351455688476562
+Latent replay turned on
+CUDA is used
+RAM BEFORE LOADING DATA: 0.227874755859375
+
+Preparing the data...
+SPLIT RATIO: [50000, 10000]
+Generated permutations: [7 4 6 0 9 3 8 5 2 1]
+Downloading http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz
+Failed to download (trying next):
+HTTP Error 503: Service Unavailable
+
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/train-images-idx3-ubyte.gz to ./datasets/mnist/MNIST/raw/train-images-idx3-ubyte.gz
+Extracting ./datasets/mnist/MNIST/raw/train-images-idx3-ubyte.gz to ./datasets/mnist/MNIST/raw
+
+Downloading http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz
+Failed to download (trying next):
+HTTP Error 503: Service Unavailable
+
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/train-labels-idx1-ubyte.gz to ./datasets/mnist/MNIST/raw/train-labels-idx1-ubyte.gz
+Extracting ./datasets/mnist/MNIST/raw/train-labels-idx1-ubyte.gz to ./datasets/mnist/MNIST/raw
+
+Downloading http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz
+Failed to download (trying next):
+HTTP Error 503: Service Unavailable
+
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/t10k-images-idx3-ubyte.gz to ./datasets/mnist/MNIST/raw/t10k-images-idx3-ubyte.gz
+Extracting ./datasets/mnist/MNIST/raw/t10k-images-idx3-ubyte.gz to ./datasets/mnist/MNIST/raw
+
+Downloading http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz
+Failed to download (trying next):
+HTTP Error 503: Service Unavailable
+
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz
+Downloading https://ossci-datasets.s3.amazonaws.com/mnist/t10k-labels-idx1-ubyte.gz to ./datasets/mnist/MNIST/raw/t10k-labels-idx1-ubyte.gz
+Extracting ./datasets/mnist/MNIST/raw/t10k-labels-idx1-ubyte.gz to ./datasets/mnist/MNIST/raw
+
+Processing...
+Done!
+ --> mnist: 'train'-dataset consisting of 60000 samples
+ --> mnist: 'test'-dataset consisting of 10000 samples
+RAM AFTER LOADING DATA: 0.29810333251953125
+RAM BEFORE CLASSIFER: 2.2429046630859375
+RAM AFTER CLASSIFER: 2.244415283203125
+RAM BEFORE PRE-TRAINING 2.244415283203125
+RAM AFTER PRE-TRAINING 2.2554168701171875
+RAM BEFORE GENERATOR: 2.2554168701171875
+RAM AFTER DECLARING GENERATOR: 2.2554168701171875
+MACs of root classifier 0
+MACs of top classifier: 0
+RAM BEFORE REPORTING: 2.2554168701171875
+
+Parameter-stamp...
+ --> task:          splitMNIST10-class
+ --> model:         MLP([1024, 400, 400])_c10
+ --> hyper-params:  i500-lr0.001-b128-adam
+ --> replay:        naive-rehearsal
+splitMNIST10-class--MLP([1024, 400, 400])_c10--i500-lr0.001-b128-adam--naive-rehearsal-s6059
+
+----------------------------------------TOP----------------------------------------
+TopClassifier(
+  (classifier): fc_layer(
+    (linear): LinearExcitability(in_features=128, out_features=10)
+  )
+)
+------------------------------------------------------------------------------------------
+--> this network has 1290 parameters (~0.0 million)
+      of which: - learnable: 1290 (~0.0 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+
+----------------------------------------ROOT----------------------------------------
+RootClassifier(
+  (flatten): Flatten()
+  (fcE): MLP(
+    (fcLayer1): fc_layer(
+      (linear): LinearExcitability(in_features=1024, out_features=400)
+      (nl): ReLU()
+    )
+    (fcLayer2): fc_layer(
+      (linear): LinearExcitability(in_features=400, out_features=128)
+      (nl): Sigmoid()
+    )
+  )
+)
+------------------------------------------------------------------------------------------
+--> this network has 461328 parameters (~0.5 million)
+      of which: - learnable: 461328 (~0.5 million)
+                - fixed: 0 (~0.0 million)
+------------------------------------------------------------------------------------------
+RAM BEFORE TRAINING: 2.2554168701171875
+CPU BEFORE TRAINING: (51.75, 4.72)
+INITIALISING GPU TRACKER
+
+Training...
+PEAK TRAINING RAM: 2.2597732543945312
+Peak mem and init mem: 949 929
+GPU BEFORE EVALUATION: (4.545454545454546, 20)
+RAM BEFORE EVALUATION: 2.2597732543945312
+CPU BEFORE EVALUATION: (207.4, 8.73)
+
+
+EVALUATION RESULTS:
+
+ Precision on test-set:
+ - Task 1: 0.9406
+ - Task 2: 0.9217
+ - Task 3: 0.9476
+ - Task 4: 0.9182
+ - Task 5: 0.9824
+ - Task 6: 0.9300
+ - Task 7: 0.9457
+ - Task 8: 0.9776
+ - Task 9: 0.9238
+ - Task 10: 0.9572
+=> Average precision over all 10 tasks: 0.9445
+
+=> Total training time = 101.9 seconds
+
+RAM AT THE END: 2.25994873046875
+CPU AT THE END: (209.24, 8.75)
