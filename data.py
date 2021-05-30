@@ -45,7 +45,7 @@ def get_dataset(name, type='train', download=True, capacity=None, permutation=No
         )
     elif name == "affectnet": 
         dataset = dataset_class(
-            root='/home/ss2719/affectnet_preprocessed_balanced/' + type, 
+            root='/local/scratch/ss2719/datasets/AffectNet_Separated/affectnet_preprocessed_balanced/' + type, 
             loader=lambda x: Image.open(x), 
             extensions=("jpg",), 
             transform=dataset_transform, 
@@ -234,6 +234,7 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
                 permutations = [None] + [np.random.permutation(config['size']**2) for _ in range(tasks-1)]
             else:
                 permutations = [np.random.permutation(config['size']**2) for _ in range(tasks)]
+                print("Generated permutations:", permutations)
             # prepare datasets per task
             train_datasets = []
             test_datasets = []
@@ -259,6 +260,7 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
         if not only_config:
             # prepare permutation to shuffle label-ids (to create different class batches for each random seed)
             permutation = np.array(list(range(10))) if exception else np.random.permutation(list(range(10)))
+            print("Generated permutations:", permutation)
             target_transform = transforms.Lambda(lambda y, p=permutation: int(p[y]))
             # prepare train and test datasets with all classes
             mnist_train = get_dataset('mnist', type="train", dir=data_dir, target_transform=target_transform,
@@ -293,6 +295,7 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
         if not only_config:
             # prepare permutation to shuffle label-ids (to create different class batches for each random seed)
             permutation = np.array(list(range(8))) if exception else np.random.permutation(list(range(8)))
+            print("Generated permutations:", permutation)
             target_transform = transforms.Lambda(lambda y, p=permutation: int(p[y]))
             # prepare train and test datasets with all classes
             ckplus_train = get_dataset('ckplus', type="train", dir=data_dir, target_transform=target_transform,
@@ -327,6 +330,7 @@ def get_multitask_experiment(name, scenario, tasks, data_dir="./datasets", only_
         if not only_config:
             # prepare permutation to shuffle label-ids (to create different class batches for each random seed)
             permutation = np.array(list(range(8))) if exception else np.random.permutation(list(range(8)))
+            print("Generated permutations:", permutation)
             target_transform = transforms.Lambda(lambda y, p=permutation: int(p[y]))
             # prepare train and test datasets with all classes
             affectnet_train = get_dataset('affectnet', type="train", dir=data_dir, target_transform=target_transform,
