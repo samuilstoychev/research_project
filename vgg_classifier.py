@@ -12,8 +12,7 @@ from vgg_face.vgg_face import VGG_FACE_16
 class VGGClassifier(ContinualLearner, Replayer, ExemplarHandler):
     '''Model for classifying images, "enriched" as "ContinualLearner"-, Replayer- and ExemplarHandler-object.'''
 
-    def __init__(self, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False, 
-                 out_channels=5, kernel_size=5, face=False):
+    def __init__(self, classes, latent_space, binaryCE=False, binaryCE_distill=False, AGEM=False, face=False):
 
         # configurations
         super().__init__()

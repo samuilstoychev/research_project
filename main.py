@@ -336,8 +336,7 @@ def run(args, verbose=False):
     elif args.vgg_root: 
         model = VGGClassifier(
             classes=config['classes'], latent_space=args.latent_size, 
-            binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem,
-            out_channels=args.out_channels, kernel_size=args.kernel_size, face=args.use_vgg_face
+            binaryCE=args.bce, binaryCE_distill=args.bce_distill, AGEM=args.agem, face=args.use_vgg_face
         ).to(device)
         print("RAM AFTER CLASSIFER:", ramu.compute("AFTER CLASSIFIER"))
     elif args.network == "cnn": 

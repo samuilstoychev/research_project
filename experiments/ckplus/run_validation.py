@@ -60,7 +60,7 @@ def run_experiments():
     # Using the seeds generated during the experiments from 2021-05-01-15-30
     random_seeds = [2990, 6788, 9524]
 
-    for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd", "none"]: 
+    for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd"]: 
         for seed in random_seeds: 
             cmd = get_command(replay_method, seed)
             commands_to_run.append(cmd)

@@ -170,33 +170,18 @@ def get_available_transforms(dataset, mode="train", data_augmentation=False, vgg
     if dataset == 'mnist28': 
         return [ transforms.ToTensor() ]
     if dataset == 'ckplus' or dataset == 'affectnet': 
-        if data_augmentation == False: 
-            if vgg: 
-                return [
-                    transforms.Resize((100, 100)), 
-                    transforms.ToTensor(),
-                ]
-            else: 
-                return [
-                    transforms.Grayscale(), 
-                    transforms.Resize((32, 32)), 
-                    transforms.ToTensor(), 
-                ]
-        # Otherwise, if data augmentation is turned on ... 
-        elif mode == 'train': 
+        if data_augmentation == False or mode == 'test': 
             return [
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomRotation(10),  
-                transforms.Grayscale(), 
-                transforms.Resize((32, 32)), 
-                transforms.ToTensor(), 
+                transforms.Resize((100, 100)), 
+                transforms.ToTensor(),
             ]
-        elif mode == 'test': 
-            return [
-                transforms.Grayscale(), 
-                transforms.Resize((32, 32)), 
-                transforms.ToTensor(), 
-            ]
+        # Otherwise, if data augmentation is turned on, do the following to the train data... 
+        return [
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomRotation(10),  
+            transforms.Resize((100, 100)), 
+            transforms.ToTensor(), 
+        ]
     raise Exception("Transforms not found!")
 
 # specify configurations of available data-sets.
