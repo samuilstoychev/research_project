@@ -47,8 +47,6 @@ def get_command(replay_method, seed):
             cmd.append("--latent-replay=on")
             cmd.append("--g-fc-uni=200")
             cmd.append("--distill")
-        elif replay_method == "none": 
-            pass
         else: 
             raise Exception("Replay method not implemented: " + replay_method)
 
@@ -62,7 +60,7 @@ def run_experiments():
     # Using the seeds from 2021-05-04-14-11
     random_seeds = [1842, 1856, 2306]
 
-    for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd", "none"]: 
+    for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd"]: 
         for seed in random_seeds: 
             cmd = get_command(replay_method, seed)
             commands_to_run.append(cmd)

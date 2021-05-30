@@ -48,8 +48,6 @@ def get_command(architecture, replay_method, scenario, gpu, early_stopping, seed
         elif replay_method == "lr": 
             cmd.append("--replay=naive-rehearsal")
             cmd.append("--latent-replay=on")
-        elif replay_method == "none": 
-            cmd.append("--pretrain-baseline")
 
         if not gpu: 
             cmd.append("--no-gpus")
@@ -67,7 +65,7 @@ def run_experiments(scenario, gpu, early_stopping):
 
     commands_to_run = []
     for architecture in ["cnn"]: 
-        for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd", "none"]: 
+        for replay_method in ["nr", "lr", "gr", "lgr", "grd", "lgrd"]: 
             cmd = get_command(architecture, replay_method, scenario, gpu, early_stopping, seed)
             commands_to_run.append(cmd)
     commands_to_run = np.random.permutation(commands_to_run) 

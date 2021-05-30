@@ -47,8 +47,6 @@ def get_command(replay_method, seed):
             cmd.append("--latent-replay=on")
             cmd.append("--g-fc-uni=200")
             cmd.append("--distill")
-        elif replay_method == "none": 
-            pass
         else: 
             raise Exception("Replay method not implemented: " + replay_method)
 
