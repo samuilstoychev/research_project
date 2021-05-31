@@ -1,102 +1,42 @@
-# Continual Learning
-This is a PyTorch implementation of the continual learning experiments described in the following papers:
-* Three scenarios for continual learning ([link](https://arxiv.org/abs/1904.07734))
-* Generative replay with feedback connections as a general strategy 
-for continual learning ([link](https://arxiv.org/abs/1809.10635))
+# Continual Learning with Latent Generative Replay 
 
+This repository includes the source code used for evaluating the Latent Generative Replay (LGR) continual learning strategy described in the MPhil dissertation titled *"Improving Continual Learning Resource Efficiency with Latent Generative Replay"*. The repository has been created by forking and extending the [continual learning repository by van de Ven](https://github.com/GMvandeVen/continual-learning). 
 
-## Requirements
-The current version of the code has been tested with:
-* `pytorch 1.1.0`
-* `torchvision 0.2.2`
+## Requirements 
 
+The `pip` environment used for running the experiments has been exported as `requirements.txt`. 
 
-## Running the experiments
-Individual experiments can be run with `main.py`. Main options are:
-- `--experiment`: which task protocol? (`splitMNIST`|`permMNIST`)
-- `--scenario`: according to which scenario? (`task`|`domain`|`class`)
-- `--tasks`: how many tasks?
+## Files
 
-To run specific methods, use the following:
-- Context-dependent-Gating (XdG): `./main.py --xdg=0.8`
-- Elastic Weight Consolidation (EWC): `./main.py --ewc --lambda=5000`
-- Online EWC:  `./main.py --ewc --online --lambda=5000 --gamma=1`
-- Synaptic Intelligence (SI): `./main.py --si --c=0.1`
-- Learning without Forgetting (LwF): `./main.py --replay=current --distill`
-- Generative Replay (GR): `./main.py --replay=generative`
-- GR with distillation: `./main.py --replay=generative --distill`
-- Replay-trough-Feedback (RtF): `./main.py --replay=generative --distill --feedback`
-- Experience Replay (ER): `./main.py --replay=exemplars --budget=2000`
-- Averaged Gradient Episodic Memory (A-GEM): `./main.py --replay=exemplars --agem --budget=2000`
-- iCaRL: `./main.py --icarl --budget=2000`
+On top of the additional continual learning repository, we have added/modified the following files/folders: 
+* `analysis` - this includes Jupyter Notebooks used for pre-processing and visualising results, creating plots and tables for the report. 
+* `experiments` - this includes the scripts for running the experiments as well as the logs from the experiments. 
+* `autoencoder_latent.py` - a VAE generative model generating latent replay layer activations. (The implementation is identical to the default implementation provided in `vae_models.py` but it takes and generates 1-dimensional vectors instead of 2-dimensional images). 
+* `CKPlusPreprocessing.ipynb` and `FaceCropping.ipynb` - notebooks used for pre-processing CK+ images and cropping them. 
+* `CL_metrics_CLAIR.py` - contains code for extracting system metrics. This code has been provided by [Vincenzo Lomonaco et al](https://arxiv.org/abs/2104.00405). 
+* `cnn_classifier.py` - the LeNet classifier adapted from [the sample implementation in the PyTorch repository](https://github.com/pytorch/examples/blob/master/mnist/main.py). `cnn_top_classifier.py` and `cnn_root_classifier.py` respectively define the top and the root part of the architecture. 
+* `data.py` - we have modified this file to add support for the CK+ and AffectNet datasets. 
+* `main.py` - the main scripts for running the experiments. We have modified this to support LGR and the new datasets. We have also added several new flags described below. 
+* `naive_rehearsal.py` - this includes our implementation of the replay buffer used to support Naïve Rehearsal and Latent Replay continual learning strategies. 
+* `preprocess_affectnet.py` - pre-processes the AffectNet dataset to create the down-sampled or a fully-balanced subset and store it according to the file structure defined by torchvision's [`DatasetFolder` class](https://pytorch.org/vision/stable/datasets.html#datasetfolder). 
+* `train_latent.py` - a modification of the default `train.py` allowing the main model to be solved using latent replay. 
+* `vgg_classifier.py` - implementation of the VGG-16 architecture. 
 
-For information on further options: `./main.py -h`.
+## Flags
 
-The code in this repository only supports MNIST-based experiments. An extension to more challenging problems (e.g., with
-natural images as inputs) can be found here: <https://github.com/GMvandeVen/brain-inspired-replay>.
+We have also added a few flags that can be passed as options when running the `main.py` script. Thos include: 
+* `--latent-replay=(on|off)` - turns latent replay on or off. This flag is set to `on` for Latent Replay, Latent Generative Replay and Latent Generative Replay with Distillation. 
+* `--network=(mlp|cnn)` - what type of classifier should be used? 
+* `--latent_size` - the size of the latent replay layer (denoted as G<sub>OUT</sub> in the dissertation). 
+* `--pretrain-baseline` - pretrain the root of the network on an unseen split of the training data (used for the MNIST experiments only). 
+* `--data-augmentation` - enable data augmentations (for CK+ and AffectNet only). Augmentations include random horizontal flip and random rotation. 
+* `--vgg-root` - use a pre-trained VGG-16 root/feature extractor. 
+* `--buffer-size` - the size of the replay buffer for the rehearsal strategies. 
+* `--early-stop` - enable early stopping. 
+* `--validation` - validate performance after each task (i.e. obtain and log performance on the entire training dataset and the entire validation dataset). 
+* `--use-vgg-face` - use VGG-Face over VGG-16. 
 
-## Running comparisons from the papers
-#### "Three CL scenarios"-paper
-[This paper](https://arxiv.org/abs/1904.07734) describes three scenarios for continual learning (Task-IL, Domain-IL &
-Class-IL) and provides an extensive comparion of recently proposed continual learning methods. It uses the permuted and
-split MNIST task protocols, with both performed according to all three scenarios.
-
-A comparison of all methods included in this paper can be run with `compare_all.py` (this script includes extra
-methods and reports additional metrics compared to the paper). The comparison in Appendix B can be run with
-`compare_taskID.py`, and Figure C.1 can be recreated with `compare_replay.py`.
-
-#### "Replay-through-Feedback"-paper
-The three continual learning scenarios were actually first identified in [this paper](https://arxiv.org/abs/1809.10635),
-after which this paper introduces the Replay-through-Feedback framework as a more efficent implementation of generative
-replay. 
-
-A comparison of all methods included in this paper can be run with
-`compare_time.py`. This includes a comparison of the time these methods take to train (Figures 4 and 5).
-
-Note that the results reported in this paper were obtained with
-[this earlier version](https://github.com/GMvandeVen/continual-learning/tree/9c0ca78f43c29594b376ca59516031fcdaa5d7ba)
-of the code. 
-
-
-## On-the-fly plots during training
-With this code it is possible to track progress during training with on-the-fly plots. This feature requires `visdom`, 
-which can be installed as follows:
-```bash
-pip install visdom
+The other flags are documented in [the README file of van de Ven's continual learning repository](https://github.com/GMvandeVen/continual-learning). For example, to run Latent Generative Replay with CK+ on Task-IL (using the VGG-16 architecture), you can run the following command from the root directory of the repository: 
 ```
-Before running the experiments, the visdom server should be started from the command line:
-```bash
-python -m visdom.server
+./main.py --time --scenario=task --experiment=splitCKPLUS --tasks=4 --vgg-root --network=cnn --iters=2000 --batch=32 --lr=0.0001 --latent-size=4096 --replay=generative --latent-replay=on --g-fc-uni=200 --distill
 ```
-The visdom server is now alive and can be accessed at `http://localhost:8097` in your browser (the plots will appear
-there). The flag `--visdom` should then be added when calling `./main.py` to run the experiments with on-the-fly plots.
-
-For more information on `visdom` see <https://github.com/facebookresearch/visdom>.
-
-
-### Citation
-Please consider citing our papers if you use this code in your research:
-```
-@article{vandeven2019three,
-  title={Three scenarios for continual learning},
-  author={van de Ven, Gido M and Tolias, Andreas S},
-  journal={arXiv preprint arXiv:1904.07734},
-  year={2019}
-}
-
-@article{vandeven2018generative,
-  title={Generative replay with feedback connections as a general strategy for continual learning},
-  author={van de Ven, Gido M and Tolias, Andreas S},
-  journal={arXiv preprint arXiv:1809.10635},
-  year={2018}
-}
-```
-
-
-### Acknowledgments
-The research projects from which this code originated have been supported by an IBRO-ISN Research Fellowship, by the 
-Lifelong Learning Machines (L2M) program of the Defence Advanced Research Projects Agency (DARPA) via contract number 
-HR0011-18-2-0025 and by the Intelligence Advanced Research Projects Activity (IARPA) via Department of 
-Interior/Interior Business Center (DoI/IBC) contract number D16PC00003. Disclaimer: views and conclusions 
-contained herein are those of the authors and should not be interpreted as necessarily representing the official
-policies or endorsements, either expressed or implied, of DARPA, IARPA, DoI/IBC, or the U.S. Government.
