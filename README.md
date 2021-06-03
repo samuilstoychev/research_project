@@ -24,7 +24,7 @@ On top of the additional continual learning repository, we have added/modified t
 
 ## Flags
 
-We have also added a few flags that can be passed as options when running the `main.py` script. Thos include: 
+We have also added a few flags that can be passed as options when running the `main.py` script. Those include: 
 * `--latent-replay=(on|off)` - turns latent replay on or off. This flag is set to `on` for Latent Replay, Latent Generative Replay and Latent Generative Replay with Distillation. 
 * `--network=(mlp|cnn)` - what type of classifier should be used? 
 * `--latent_size` - the size of the latent replay layer (denoted as G<sub>OUT</sub> in the dissertation). 
