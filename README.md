@@ -19,7 +19,7 @@ On top of the additional continual learning repository, we have added/modified t
 * `main.py` - the main scripts for running the experiments. We have modified this to support LGR and the new datasets. We have also added several new flags described below. 
 * `naive_rehearsal.py` - this includes our implementation of the replay buffer used to support Naïve Rehearsal and Latent Replay continual learning strategies. 
 * `preprocess_affectnet.py` - pre-processes the AffectNet dataset to create the down-sampled or a fully-balanced subset and store it according to the file structure defined by torchvision's [`DatasetFolder` class](https://pytorch.org/vision/stable/datasets.html#datasetfolder). 
-* `train_latent.py` - a modification of the default `train.py` allowing the main model to be solved using latent replay. 
+* `train_latent.py` - a modification of the default `train.py` allowing the main model to be trained using latent replay. 
 * `vgg_classifier.py` - implementation of the VGG-16 architecture. 
 
 ## Flags
